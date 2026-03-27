@@ -18,13 +18,6 @@ export function Tasks({ tasks, addTask, updateTask, toggleTask, deleteTask }) {
 
   const filtered = tasks.filter(t => filter === "all" ? true : filter === "pending" ? !t.done : t.done);
 
-  const TaskForm = () => (
-    <>
-      <FormGroup label="Task title *"><Input value={form.title} onChange={set("title")} placeholder="e.g. Follow up call" /></FormGroup>
-      <FormGroup label="Due date"><Input value={form.due} onChange={set("due")} placeholder="e.g. Apr 1" /></FormGroup>
-    </>
-  );
-
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
@@ -62,8 +55,15 @@ export function Tasks({ tasks, addTask, updateTask, toggleTask, deleteTask }) {
         }
       </Card>
 
-      <Modal isOpen={open} title="Add task" onClose={() => setOpen(false)} onSave={saveAdd}><TaskForm /></Modal>
-      <Modal isOpen={!!editTarget} title="Edit task" onClose={() => setEditTarget(null)} onSave={saveEdit}><TaskForm /></Modal>
+      <Modal isOpen={open} title="Add task" onClose={() => setOpen(false)} onSave={saveAdd}>
+        <FormGroup label="Task title *"><Input value={form.title} onChange={set("title")} placeholder="e.g. Follow up call" /></FormGroup>
+        <FormGroup label="Due date"><Input value={form.due} onChange={set("due")} placeholder="e.g. Apr 1" /></FormGroup>
+      </Modal>
+
+      <Modal isOpen={!!editTarget} title="Edit task" onClose={() => setEditTarget(null)} onSave={saveEdit}>
+        <FormGroup label="Task title *"><Input value={form.title} onChange={set("title")} placeholder="e.g. Follow up call" /></FormGroup>
+        <FormGroup label="Due date"><Input value={form.due} onChange={set("due")} placeholder="e.g. Apr 1" /></FormGroup>
+      </Modal>
     </div>
   );
 }

@@ -74,7 +74,6 @@ export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealSta
 
   function openAdd() { setForm(blank()); setOpen(true); }
   function openEdit(deal) { setForm({ name: deal.name, company: deal.company||"", value: deal.value||"", stage: deal.stage, contact_name: deal.contact_name||"", close_date: deal.close_date||"" }); setEditTarget(deal); }
-
   function saveAdd() { if (!form.name.trim()) return; addDeal({ ...form, value: Number(form.value)||0 }); setForm(blank()); setOpen(false); }
   function saveEdit() { if (!form.name.trim()) return; updateDeal(editTarget.id, { ...form, value: Number(form.value)||0 }); setEditTarget(null); }
 
@@ -84,17 +83,6 @@ export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealSta
 
   const stageTotal = s => deals.filter(d => d.stage === s).reduce((a, d) => a + (Number(d.value)||0), 0);
   const winRate = deals.length > 0 ? Math.round((deals.filter(d => d.stage === "Won").length / deals.length) * 100) : 0;
-
-  const DealForm = () => (
-    <>
-      <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
-      <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
-      <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
-      <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
-      <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
-      <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
-    </>
-  );
 
   return (
     <div>
@@ -132,8 +120,23 @@ export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealSta
         })}
       </div>
 
-      <Modal isOpen={open} title="Add deal" onClose={() => setOpen(false)} onSave={saveAdd}><DealForm /></Modal>
-      <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}><DealForm /></Modal>
+      <Modal isOpen={open} title="Add deal" onClose={() => setOpen(false)} onSave={saveAdd}>
+        <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
+        <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
+        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
+        <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
+        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+      </Modal>
+
+      <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}>
+        <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
+        <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
+        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
+        <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
+        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+      </Modal>
     </div>
   );
 }
