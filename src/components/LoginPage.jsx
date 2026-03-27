@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ForgotPassword } from "./ForgotPassword";
 
-export function LoginPage({ onLogin, error, loading }) {
+export function LoginPage({ onLogin, error, loading, onSignup, onBack }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -78,7 +78,7 @@ export function LoginPage({ onLogin, error, loading }) {
                   </button>
                 </form>
                 <div style={{ marginTop: "1.5rem", textAlign: "center" }}>
-                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No account? Contact your administrator.</span>
+                  <span style={{ fontSize: 12, color: "var(--text-muted)" }}>No account? </span><button onClick={onSignup} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>Start free trial</button>
                 </div>
               </>
             )
