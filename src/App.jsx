@@ -62,9 +62,15 @@ export default function App() {
     if (!auth.initializing && auth.user) setScreen("app");
   }, [auth.initializing, auth.user]);
 
+  const [confirmEmail, setConfirmEmail] = useState("");
+
   async function handleSignup(formData) {
-    const ok = await auth.signup({ ...formData, plan: signupPlan });
-    if (ok) setScreen("app");
+    const result = await auth.signup({ ...formData, plan: signupPlan });
+    if (result === "confirm") {
+      setConfirmEmail(formData.email);
+    } else if (result === true) {
+      setScreen("app");
+    }
   }
 
   function goSignup(plan) { setSignupPlan(plan || "pro"); setScreen("signup"); }
@@ -81,7 +87,7 @@ export default function App() {
 
   // Public screens
   if (!auth.user) {
-    if (screen === "signup")  return <SignupPage onSignup={handleSignup} onLogin={goLogin} error={auth.error} loading={auth.loading} defaultPlan={signupPlan} />;
+    if (screen === "signup")  return <SignupPage onSignup={handleSignup} onLogin={goLogin} error={auth.error} loading={auth.loading} defaultPlan={signupPlan} needsConfirmation={auth.needsConfirmation} confirmEmail={confirmEmail} />;
     if (screen === "login")   return <LoginPage  onLogin={auth.login}   error={auth.error} loading={auth.loading} onSignup={goSignup} onBack={goLanding} />;
     return <LandingPage onSignup={goSignup} onLogin={goLogin} />;
   }
