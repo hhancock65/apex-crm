@@ -42,23 +42,21 @@ export function useAuth() {
     setInitializing(false);
   }
 
-  // Login with username + password
-  // For new signups (real email): tries real email first, falls back to username@apexcrm.app
+  // Login — uses real email directly (stored in Supabase auth)
+  // Users sign in with username, but we look it up via a public RPC function
   async function login(username, password) {
     setError(""); setLoading(true);
     const trimmed = username.trim().toLowerCase();
 
-    // First try: treat input as a username, look up the real email from profiles
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("real_email")
-      .eq("username", trimmed)
-      .single();
+    // Call a public Supabase function to resolve username → email
+    // This bypasses RLS since it's a SECURITY DEFINER function
+    const { data: emailData, error: rpcError } = await supabase
+      .rpc("get_email_for_username_v2", { p_username: trimmed });
 
-    let emailToUse = profileData?.real_email || null;
+    let emailToUse = emailData || null;
 
-    // If no real email found, fall back to internal format (legacy users)
-    if (!emailToUse) {
+    // Fallback for legacy users created with @apexcrm.app
+    if (!emailToUse || rpcError) {
       emailToUse = `${trimmed}@apexcrm.app`;
     }
 
@@ -67,25 +65,39 @@ export function useAuth() {
       password,
     });
 
-    setLoading(false);
+    // If first attempt fails, try the other format
     if (authError) {
+      const fallback = emailToUse.includes("@apexcrm.app")
+        ? null
+        : `${trimmed}@apexcrm.app`;
+
+      if (fallback) {
+        const { error: fallbackError } = await supabase.auth.signInWithPassword({
+          email: fallback,
+          password,
+        });
+        if (!fallbackError) { setLoading(false); return true; }
+      }
+
       setError("Invalid username or password.");
+      setLoading(false);
       return false;
     }
+
+    setLoading(false);
     return true;
   }
 
   // Self-serve signup — uses REAL email for Supabase auth
   async function signup({ name, username, email, orgName, password }) {
     setError(""); setLoading(true);
-    const trimmed  = username.trim().toLowerCase();
+    const trimmed   = username.trim().toLowerCase();
     const trimEmail = email.trim().toLowerCase();
     const slug = orgName.toLowerCase()
       .replace(/[^a-z0-9]/g, "-")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
 
-    // Create auth user with REAL email
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email:    trimEmail,
       password,
@@ -101,9 +113,8 @@ export function useAuth() {
       return false;
     }
 
-    // Supabase may require email confirmation — handle gracefully
+    // Email confirmation required
     if (authData?.user && !authData.session) {
-      // Email confirmation required — create org/profile and show confirmation message
       await supabase.rpc("create_org_and_profile", {
         p_user_id:  authData.user.id,
         p_username: trimmed,
@@ -111,30 +122,25 @@ export function useAuth() {
         p_org_name: orgName,
         p_org_slug: slug,
       });
-      // Also store real_email in profile
-      await supabase.from("profiles").update({ real_email: trimEmail }).eq("id", authData.user.id);
+      await supabase.from("profiles")
+        .update({ real_email: trimEmail })
+        .eq("id", authData.user.id);
       setLoading(false);
       setNeedsConfirmation(true);
       return "confirm";
     }
 
-    // No confirmation needed — create org + profile immediately
-    const { error: fnError } = await supabase.rpc("create_org_and_profile", {
+    // No confirmation needed
+    await supabase.rpc("create_org_and_profile", {
       p_user_id:  authData.user.id,
       p_username: trimmed,
       p_name:     name,
       p_org_name: orgName,
       p_org_slug: slug,
     });
-
-    // Store real email in profile
-    await supabase.from("profiles").update({ real_email: trimEmail }).eq("id", authData.user.id);
-
-    if (fnError) {
-      setError("Account created but setup failed. Contact support.");
-      setLoading(false);
-      return false;
-    }
+    await supabase.from("profiles")
+      .update({ real_email: trimEmail })
+      .eq("id", authData.user.id);
 
     setLoading(false);
     return true;
