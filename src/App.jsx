@@ -62,6 +62,21 @@ export default function App() {
     if (!auth.initializing && auth.user) setScreen("app");
   }, [auth.initializing, auth.user]);
 
+  // Detect Supabase email confirmation token or error in URL hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token")) {
+      setScreen("confirming");
+      setTimeout(() => {
+        window.history.replaceState(null, "", window.location.pathname);
+      }, 2000);
+    } else if (hash && hash.includes("error=access_denied")) {
+      // Link expired or already used
+      setScreen("link_expired");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, []);
+
   const [confirmEmail, setConfirmEmail] = useState("");
 
   async function handleSignup(formData) {
@@ -77,8 +92,42 @@ export default function App() {
   function goLogin()      { setScreen("login"); }
   function goLanding()    { setScreen("landing"); }
 
-  // Loading
-  if (auth.initializing) return <LoadingScreen />;
+  // Expired or invalid confirmation link
+  if (screen === "link_expired") return (
+    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", fontFamily: "var(--font)" }}>
+      <div style={{ textAlign: "center", maxWidth: 400, padding: "2rem" }}>
+        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#FCEBEB", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#A32D2D" strokeWidth="1.8"><circle cx="11" cy="11" r="9"/><path d="M11 7v4M11 15h.01"/></svg>
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>Confirmation link expired</div>
+        <div style={{ fontSize: 14, color: "var(--text-muted)", lineHeight: 1.7, marginBottom: "1.5rem" }}>
+          This link has expired or already been used. Confirmation links are valid for 24 hours. Please sign up again to get a new link.
+        </div>
+        <button onClick={() => setScreen("signup")} style={{ padding: "10px 24px", background: "#185FA5", color: "#fff", border: "none", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginRight: 10 }}>
+          Sign up again
+        </button>
+        <button onClick={() => setScreen("login")} style={{ padding: "10px 24px", background: "transparent", color: "var(--text-muted)", border: "0.5px solid var(--border-strong)", borderRadius: 9, fontSize: 13, cursor: "pointer", fontFamily: "inherit" }}>
+          Sign in
+        </button>
+      </div>
+    </div>
+  );
+
+  // Loading or processing email confirmation token
+  if (auth.initializing || screen === "confirming") return (
+    <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg)", fontFamily: "var(--font)" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", marginBottom: 8 }}>
+          Apex <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>CRM</span>
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text-muted)", marginBottom: 16 }}>
+          {screen === "confirming" ? "Confirming your account..." : "Loading..."}
+        </div>
+        <div style={{ width: 32, height: 32, border: "2px solid var(--border)", borderTop: "2px solid var(--accent)", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto" }} />
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
 
   // Admin dashboard (full screen override)
   if (showAdmin && auth.user) {

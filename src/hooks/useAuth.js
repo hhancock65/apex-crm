@@ -11,13 +11,20 @@ export function useAuth() {
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   useEffect(() => {
+    // getSession also handles the #access_token hash from email confirmation
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) { setUser(session.user); fetchProfile(session.user.id); }
       else setInitializing(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session?.user) { setUser(session.user); fetchProfile(session.user.id); }
-      else { setUser(null); setProfile(null); setOrg(null); setInitializing(false); }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (session?.user) { setUser(session.user); fetchProfile(session.user.id); }
+      } else if (event === "SIGNED_OUT") {
+        setUser(null); setProfile(null); setOrg(null); setInitializing(false);
+      } else if (!session) {
+        setInitializing(false);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -105,7 +112,14 @@ export function useAuth() {
       email:    trimEmail,
       password,
       options: {
-        data: { name, username: trimmed },
+        // Pass all org info as metadata — the database trigger creates
+        // the org and profile automatically when the user is created
+        data: {
+          name,
+          username:  trimmed,
+          org_name:  orgName,
+          org_slug:  slug,
+        },
         emailRedirectTo: redirectUrl,
       },
     });
@@ -116,30 +130,12 @@ export function useAuth() {
       return false;
     }
 
-    // Email confirmation required
+    // Email confirmation required — org+profile already created by trigger
     if (authData?.user && !authData.session) {
-      await supabase.rpc("create_org_and_profile", {
-        p_user_id:    authData.user.id,
-        p_username:   trimmed,
-        p_name:       name,
-        p_org_name:   orgName,
-        p_org_slug:   slug,
-        p_real_email: trimEmail,
-      });
       setLoading(false);
       setNeedsConfirmation(true);
       return "confirm";
     }
-
-    // No confirmation needed
-    await supabase.rpc("create_org_and_profile", {
-      p_user_id:    authData.user.id,
-      p_username:   trimmed,
-      p_name:       name,
-      p_org_name:   orgName,
-      p_org_slug:   slug,
-      p_real_email: trimEmail,
-    });
 
     setLoading(false);
     return true;
