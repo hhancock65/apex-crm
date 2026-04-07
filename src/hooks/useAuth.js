@@ -98,12 +98,15 @@ export function useAuth() {
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
 
+    // Use explicit redirect URL — must match Supabase URL Configuration exactly
+    const redirectUrl = process.env.REACT_APP_SITE_URL || window.location.origin;
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email:    trimEmail,
       password,
       options: {
         data: { name, username: trimmed },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: redirectUrl,
       },
     });
 
@@ -116,15 +119,13 @@ export function useAuth() {
     // Email confirmation required
     if (authData?.user && !authData.session) {
       await supabase.rpc("create_org_and_profile", {
-        p_user_id:  authData.user.id,
-        p_username: trimmed,
-        p_name:     name,
-        p_org_name: orgName,
-        p_org_slug: slug,
+        p_user_id:    authData.user.id,
+        p_username:   trimmed,
+        p_name:       name,
+        p_org_name:   orgName,
+        p_org_slug:   slug,
+        p_real_email: trimEmail,
       });
-      await supabase.from("profiles")
-        .update({ real_email: trimEmail })
-        .eq("id", authData.user.id);
       setLoading(false);
       setNeedsConfirmation(true);
       return "confirm";
@@ -132,15 +133,13 @@ export function useAuth() {
 
     // No confirmation needed
     await supabase.rpc("create_org_and_profile", {
-      p_user_id:  authData.user.id,
-      p_username: trimmed,
-      p_name:     name,
-      p_org_name: orgName,
-      p_org_slug: slug,
+      p_user_id:    authData.user.id,
+      p_username:   trimmed,
+      p_name:       name,
+      p_org_name:   orgName,
+      p_org_slug:   slug,
+      p_real_email: trimEmail,
     });
-    await supabase.from("profiles")
-      .update({ real_email: trimEmail })
-      .eq("id", authData.user.id);
 
     setLoading(false);
     return true;
