@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export function SignupPage({ onSignup, onLogin, error, loading, defaultPlan = "pro", needsConfirmation, confirmEmail }) {
+export function SignupPage({ onSignup, onLogin, onTerms, onPrivacy, error, loading, defaultPlan = "pro", needsConfirmation, confirmEmail }) {
   const [plan, setPlan]     = useState(defaultPlan);
   const [form, setForm]     = useState({ name: "", username: "", email: "", orgName: "", password: "", confirm: "" });
   const [localError, setLocalError] = useState("");
@@ -130,6 +130,12 @@ export function SignupPage({ onSignup, onLogin, error, loading, defaultPlan = "p
           <div style={{ marginTop: "1.25rem", textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
             Already have an account?{" "}
             <button onClick={onLogin} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>Sign in</button>
+          </div>
+          <div style={{ marginTop: "0.75rem", textAlign: "center", fontSize: 11, color: "var(--text-muted)" }}>
+            By signing up you agree to our{" "}
+            <button onClick={onTerms} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontFamily: "inherit", fontSize: 11 }}>Terms of Service</button>
+            {" "}and{" "}
+            <button onClick={onPrivacy} style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", fontFamily: "inherit", fontSize: 11 }}>Privacy Policy</button>
           </div>
         </div>
       </div>

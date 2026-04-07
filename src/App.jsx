@@ -13,6 +13,7 @@ import { Users } from "./components/Users";
 import { TrialBanner, ExpiredScreen } from "./components/TrialBanner";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { AdminDashboard } from "./components/AdminDashboard";
+import { TermsPage, PrivacyPage } from "./components/LegalPages";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
@@ -48,6 +49,7 @@ export default function App() {
   const [signupPlan, setSignupPlan]   = useState("pro");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAdmin, setShowAdmin]     = useState(false);
+  const [legalPage, setLegalPage]     = useState(null); // "terms" | "privacy" | null
   const [darkMode, setDarkMode]       = useState(() => localStorage.getItem("crm_dark") === "true");
 
   const auth  = useAuth();
@@ -91,6 +93,10 @@ export default function App() {
   function goSignup(plan) { setSignupPlan(plan || "pro"); setScreen("signup"); }
   function goLogin()      { setScreen("login"); }
   function goLanding()    { setScreen("landing"); }
+
+  // Legal pages — accessible without login
+  if (legalPage === "terms")   return <TermsPage onBack={() => setLegalPage(null)} />;
+  if (legalPage === "privacy") return <PrivacyPage onBack={() => setLegalPage(null)} />;
 
   // Expired or invalid confirmation link
   if (screen === "link_expired") return (
@@ -136,9 +142,9 @@ export default function App() {
 
   // Public screens
   if (!auth.user) {
-    if (screen === "signup")  return <SignupPage onSignup={handleSignup} onLogin={goLogin} error={auth.error} loading={auth.loading} defaultPlan={signupPlan} needsConfirmation={auth.needsConfirmation} confirmEmail={confirmEmail} />;
+    if (screen === "signup")  return <SignupPage onSignup={handleSignup} onLogin={goLogin} onTerms={() => setLegalPage("terms")} onPrivacy={() => setLegalPage("privacy")} error={auth.error} loading={auth.loading} defaultPlan={signupPlan} needsConfirmation={auth.needsConfirmation} confirmEmail={confirmEmail} />;
     if (screen === "login")   return <LoginPage  onLogin={auth.login}   error={auth.error} loading={auth.loading} onSignup={goSignup} onBack={goLanding} />;
-    return <LandingPage onSignup={goSignup} onLogin={goLogin} />;
+    return <LandingPage onSignup={goSignup} onLogin={goLogin} onTerms={() => setLegalPage("terms")} onPrivacy={() => setLegalPage("privacy")} />;
   }
 
   // Trial expired

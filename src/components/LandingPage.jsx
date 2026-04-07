@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-export function LandingPage({ onSignup, onLogin }) {
+export function LandingPage({ onSignup, onLogin, onTerms, onPrivacy }) {
   const [plan, setPlan] = useState(null);
 
   return (
@@ -115,7 +115,11 @@ export function LandingPage({ onSignup, onLogin }) {
       {/* Footer */}
       <div style={{ borderTop: "0.5px solid rgba(255,255,255,0.08)", padding: "2rem 3rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>Apex <span style={{ color: "#378ADD", fontWeight: 400 }}>CRM</span></div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>© 2026 Apex CRM. All rights reserved.</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
+          <button onClick={() => onTerms && onTerms()} style={{ background: "none", border: "none", fontSize: 12, color: "rgba(255,255,255,0.4)", cursor: "pointer", fontFamily: "inherit" }}>Terms of Service</button>
+          <button onClick={() => onPrivacy && onPrivacy()} style={{ background: "none", border: "none", fontSize: 12, color: "rgba(255,255,255,0.4)", cursor: "pointer", fontFamily: "inherit" }}>Privacy Policy</button>
+          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.3)" }}>© 2026 Apex CRM</span>
+        </div>
       </div>
     </div>
   );
