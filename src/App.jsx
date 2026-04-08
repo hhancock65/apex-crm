@@ -14,20 +14,23 @@ import { TrialBanner, ExpiredScreen } from "./components/TrialBanner";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { TermsPage, PrivacyPage } from "./components/LegalPages";
+import { SettingsPage } from "./components/SettingsPage";
+import { t, LANGUAGES } from "./lib/i18n";
 import { DashboardSkeleton, ContactsSkeleton, PipelineSkeleton, GenericSkeleton } from "./components/Skeleton";
 
-const NAV = [
-  { id: "dashboard", label: "Dashboard", icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
-  { id: "contacts",  label: "Contacts",  icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
-  { id: "pipeline",  label: "Pipeline",  icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="4" width="3" height="9" rx="0.5"/><rect x="6" y="2" width="3" height="11" rx="0.5"/><rect x="11" y="6" width="3" height="7" rx="0.5"/></svg> },
-  { id: "tasks",     label: "Tasks",     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8l2 2 4-4"/></svg> },
-  { id: "notes",     label: "Notes",     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 9.5h4"/></svg> },
-  { id: "users",     label: "Team",      icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-5 5-5"/><circle cx="12" cy="6" r="2"/><path d="M10 13c0-2.2 1.8-4 4-4"/></svg> },
+const NAV_ITEMS = [
+  { id: "dashboard", key: "dashboard", icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
+  { id: "contacts",  key: "contacts",  icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg> },
+  { id: "pipeline",  key: "pipeline",  icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="4" width="3" height="9" rx="0.5"/><rect x="6" y="2" width="3" height="11" rx="0.5"/><rect x="11" y="6" width="3" height="7" rx="0.5"/></svg> },
+  { id: "tasks",     key: "tasks",     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 8l2 2 4-4"/></svg> },
+  { id: "notes",     key: "notes",     icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M5 6h6M5 9.5h4"/></svg> },
+  { id: "users",     key: "team",      icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="5" r="2.5"/><path d="M1 13c0-2.8 2.2-5 5-5"/><circle cx="12" cy="6" r="2"/><path d="M10 13c0-2.2 1.8-4 4-4"/></svg> },
+  { id: "settings",  key: "settings",  icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1.5v1M8 13.5v1M1.5 8h1M13.5 8h1M3.3 3.3l.7.7M12 12l.7.7M12 3.3l-.7.7M4 12l-.7.7"/></svg> },
 ];
 
 const PAGE_TITLES = {
   dashboard: "Dashboard", contacts: "Contacts", pipeline: "Deal Pipeline",
-  tasks: "Tasks", notes: "Activity Notes", users: "Team",
+  // page titles are now computed dynamically
 };
 
 function LoadingScreen() {
@@ -50,7 +53,8 @@ export default function App() {
   const [signupPlan, setSignupPlan]   = useState("pro");
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showAdmin, setShowAdmin]     = useState(false);
-  const [legalPage, setLegalPage]     = useState(null); // "terms" | "privacy" | null
+  const [legalPage, setLegalPage]     = useState(null);
+  const [language, setLanguage]       = useState(() => localStorage.getItem("crm_lang") || "en");
   const [darkMode, setDarkMode]       = useState(() => localStorage.getItem("crm_dark") === "true");
 
   const auth  = useAuth();
@@ -60,6 +64,10 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("crm_dark", darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    localStorage.setItem("crm_lang", language);
+  }, [language]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -194,7 +202,7 @@ export default function App() {
             Apex <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>CRM</span>
           </div>
 
-          {NAV.map(n => (
+          {NAV_ITEMS.map(n => (
             <button key={n.id} onClick={() => { setView(n.id); setSearch(""); }}
               className={`nav-item${view === n.id ? " active" : ""}`}
               style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 1.25rem", fontSize: 13, color: view === n.id ? "var(--text)" : "var(--text-muted)", background: view === n.id ? "var(--surface)" : "transparent", border: "none", borderLeft: `2px solid ${view === n.id ? "var(--accent)" : "transparent"}`, fontWeight: view === n.id ? 500 : 400, cursor: "pointer", width: "100%", textAlign: "left", fontFamily: "inherit", transition: "all 0.15s" }}
@@ -202,7 +210,7 @@ export default function App() {
               onMouseLeave={e => { if (view !== n.id) e.currentTarget.style.background = "transparent"; }}
             >
               {n.icon}
-              {n.label}
+              {t(language, n.key)}
               {n.id === "tasks" && store.stats.pendingTasks > 0 && (
                 <span className="nav-badge" style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, background: "#185FA5", color: "#fff", padding: "1px 6px", borderRadius: 20 }}>
                   {store.stats.pendingTasks}
@@ -249,7 +257,7 @@ export default function App() {
                 ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4"><circle cx="7" cy="7" r="3"/><path d="M7 1v1M7 12v1M1 7h1M12 7h1M3 3l.7.7M10.3 10.3l.7.7M3 11l.7-.7M10.3 3.7l.7-.7"/></svg>
                 : <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M11.5 8.5A5 5 0 015.5 2.5a5 5 0 100 9 5 5 0 006-3z"/></svg>
               }
-              {darkMode ? "Light mode" : "Dark mode"}
+              {darkMode ? t(language, "lightMode") : t(language, "darkMode")}
             </button>
 
             <button onClick={auth.logout} style={{ width: "100%", padding: "6px 1.25rem 12px", fontSize: 12, color: "var(--text-muted)", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 8, transition: "background 0.15s" }}
@@ -257,7 +265,7 @@ export default function App() {
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.4"><path d="M5 2H2.5A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H5M9 10l3-3-3-3M13 7H5"/></svg>
-              Sign out
+              {t(language, "signOut")}
             </button>
           </div>
         </div>
@@ -265,10 +273,10 @@ export default function App() {
         {/* Main content */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
           <div style={{ background: "var(--card-bg)", borderBottom: "0.5px solid var(--border)", padding: "0 1.5rem", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
-            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{PAGE_TITLES[view]}</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{t(language, view === "users" ? "team" : view === "notes" ? "activityLog" : view)}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {store.loadingData && <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Syncing...</span>}
-              <input className="topbar-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts..."
+              <input className="topbar-search" value={search} onChange={e => setSearch(e.target.value)} placeholder={t(language, "searchContacts")}
                 style={{ padding: "6px 12px", fontSize: 13, border: "0.5px solid var(--border)", borderRadius: 8, background: "var(--surface)", color: "var(--text)", fontFamily: "inherit", outline: "none", width: 200 }}
               />
             </div>
@@ -288,6 +296,7 @@ export default function App() {
                 {view === "tasks"     && <Tasks     tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
                 {view === "notes"     && <Notes     notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}
                 {view === "users"     && <Users     users={store.users} currentUser={auth.user} updateUserProfile={store.updateUserProfile} />}
+                {view === "settings"  && <SettingsPage user={auth.user} org={auth.org} trialDaysLeft={auth.trialDaysLeft} language={language} onLanguageChange={setLanguage} onUpdateProfile={store.updateUserProfile} />}
               </>
             )}
           </div>
