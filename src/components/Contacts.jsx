@@ -51,21 +51,92 @@ export function Contacts({ contacts, deals, tasks, notes, addContact, addDeal, u
     const a = document.createElement("a"); a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv); a.download = "contacts.csv"; a.click();
   }
 
-  // CSV import
+  // CSV import — robust parser handling quoted fields and commas inside values
+  function parseCSVLine(line) {
+    const result = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"' && !inQuotes) { inQuotes = true; }
+      else if (ch === '"' && inQuotes) {
+        if (line[i+1] === '"') { current += '"'; i++; }
+        else { inQuotes = false; }
+      } else if (ch === ',' && !inQuotes) { result.push(current.trim()); current = ""; }
+      else { current += ch; }
+    }
+    result.push(current.trim());
+    return result;
+  }
+
   function importCSV(e) {
-    const file = e.target.files[0]; if (!file) return;
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate it's actually a CSV
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      alert('Please upload a .csv file');
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = ev => {
-      const lines = ev.target.result.split("\n").filter(Boolean);
-      const header = lines[0].split(",").map(h => h.replace(/"/g,"").trim().toLowerCase());
-      lines.slice(1).forEach(line => {
-        const vals = line.split(",").map(v => v.replace(/"/g,"").trim());
-        const row = Object.fromEntries(header.map((h,i) => [h, vals[i]||""]));
-        if (row.name) addContact({ name: row.name, company: row.company||"", email: row.email||"", phone: row.phone||"", status: row.status||"Lead" });
-      });
+      try {
+        const text = ev.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) { alert('CSV file appears to be empty.'); return; }
+
+        const header = parseCSVLine(lines[0]).map(h => h.replace(/^["']|["']$/g, '').trim().toLowerCase());
+
+        // Find column indexes flexibly
+        const nameIdx    = header.findIndex(h => h.includes('name') && !h.includes('company'));
+        const companyIdx = header.findIndex(h => h.includes('company') || h.includes('org'));
+        const emailIdx   = header.findIndex(h => h.includes('email'));
+        const phoneIdx   = header.findIndex(h => h.includes('phone') || h.includes('tel'));
+        const statusIdx  = header.findIndex(h => h.includes('status') || h.includes('stage'));
+
+        if (nameIdx === -1) {
+          alert('CSV must have a "name" column. Found columns: ' + header.join(', '));
+          return;
+        }
+
+        let imported = 0;
+        lines.slice(1).forEach(line => {
+          if (!line.trim()) return;
+          const vals = parseCSVLine(line);
+          const name = vals[nameIdx]?.replace(/^["']|["']$/g, '').trim();
+          if (!name) return;
+          addContact({
+            name,
+            company:  companyIdx >= 0 ? (vals[companyIdx]?.replace(/^["']|["']$/g, '').trim() || '') : '',
+            email:    emailIdx   >= 0 ? (vals[emailIdx]?.replace(/^["']|["']$/g, '').trim()   || '') : '',
+            phone:    phoneIdx   >= 0 ? (vals[phoneIdx]?.replace(/^["']|["']$/g, '').trim()   || '') : '',
+            status:   statusIdx  >= 0 ? (vals[statusIdx]?.replace(/^["']|["']$/g, '').trim()  || 'Lead') : 'Lead',
+          });
+          imported++;
+        });
+
+        if (imported > 0) {
+          alert(`Successfully imported ${imported} contact${imported !== 1 ? 's' : ''}!`);
+        } else {
+          alert('No contacts were imported. Make sure your CSV has a "name" column with data.');
+        }
+      } catch (err) {
+        alert('Error reading CSV: ' + err.message);
+      }
     };
+    reader.onerror = () => alert('Failed to read the file. Please try again.');
     reader.readAsText(file);
-    e.target.value = "";
+    e.target.value = '';
+  }
+
+  // Download a sample CSV template
+  function downloadTemplate() {
+    const csv = 'Name,Company,Email,Phone,Status\nJohn Smith,Acme Corp,john@acme.com,(555) 000-0001,Lead\nSarah Jones,Beta Inc,sarah@beta.com,(555) 000-0002,Qualified';
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'contacts-template.csv';
+    a.click();
   }
 
   return (
@@ -74,6 +145,7 @@ export function Contacts({ contacts, deals, tasks, notes, addContact, addDeal, u
         <SectionTitle>All contacts ({filtered.length})</SectionTitle>
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" onClick={exportCSV}>Export CSV</button>
+          <button className="btn" onClick={downloadTemplate} title="Download CSV template">Template</button>
           <label className="btn" style={{ cursor: "pointer" }}>
             Import CSV <input type="file" accept=".csv" onChange={importCSV} style={{ display: "none" }} />
           </label>
