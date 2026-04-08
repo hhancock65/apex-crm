@@ -295,7 +295,7 @@ export default function App() {
                 {view === "pipeline"  && <Pipeline  deals={store.deals} contacts={store.contacts} addDeal={store.addDeal} updateDeal={store.updateDeal} deleteDeal={store.deleteDeal} updateDealStage={store.updateDealStage} />}
                 {view === "tasks"     && <Tasks     tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
                 {view === "notes"     && <Notes     notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}
-                {view === "users"     && <Users     users={store.users} currentUser={auth.user} updateUserProfile={store.updateUserProfile} />}
+                {view === "users"     && <Users     users={store.users} currentUser={auth.user} org={auth.org} updateUserProfile={store.updateUserProfile} />}
                 {view === "settings"  && <SettingsPage user={auth.user} org={auth.org} trialDaysLeft={auth.trialDaysLeft} language={language} onLanguageChange={setLanguage} onUpdateProfile={store.updateUserProfile} />}
               </>
             )}

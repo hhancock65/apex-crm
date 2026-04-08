@@ -93,6 +93,38 @@ function paymentConfirmEmail({ name, orgName, plan, amount }) {
   };
 }
 
+function teamInviteEmail({ name, username, tempPassword, appUrl, inviterName }) {
+  return {
+    subject: `You've been invited to Apex CRM`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#1A1917">
+        <div style="font-size:20px;font-weight:700;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.5px;margin-bottom:12px">You're invited!</h1>
+        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
+          Hi ${name}, you've been added as a team member on Apex CRM. Here are your login credentials:
+        </p>
+        <div style="background:#F5F5F4;border-radius:10px;padding:20px 24px;margin-bottom:28px">
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;color:#7A7875;margin-bottom:4px">Username</div>
+            <div style="font-size:16px;font-weight:600;color:#1A1917;font-family:monospace">${username}</div>
+          </div>
+          <div>
+            <div style="font-size:12px;color:#7A7875;margin-bottom:4px">Temporary password</div>
+            <div style="font-size:16px;font-weight:600;color:#1A1917;font-family:monospace">${tempPassword}</div>
+          </div>
+        </div>
+        <p style="font-size:14px;color:#7A7875;line-height:1.7;margin-bottom:24px">
+          Please log in and change your password immediately from Settings → Change password.
+        </p>
+        <a href="${appUrl}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
+          Sign in to Apex CRM →
+        </a>
+        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
+      </div>
+    `,
+  };
+}
+
 // ── Handler ──────────────────────────────────────────────
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -114,6 +146,7 @@ module.exports = async (req, res) => {
   if      (type === "welcome")         template = welcomeEmail(data);
   else if (type === "trial_warning")   template = trialWarningEmail(data);
   else if (type === "payment_confirm") template = paymentConfirmEmail(data);
+  else if (type === "team_invite")      template = teamInviteEmail(data);
   else return res.status(400).json({ error: "Unknown email type" });
 
   try {
