@@ -13,6 +13,7 @@ export function UpgradeModal({ isOpen, onClose, org, user }) {
     try {
       await startCheckout({
         plan,
+        annual:  annual,
         orgId:   org?.id,
         orgName: org?.name,
         email:   user?.email,
