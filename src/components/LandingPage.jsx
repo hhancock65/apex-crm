@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 export function LandingPage({ onSignup, onLogin, onTerms, onPrivacy }) {
+  const [annual, setAnnual] = React.useState(false);
   const [plan, setPlan] = useState(null);
 
   return (
@@ -60,21 +61,50 @@ export function LandingPage({ onSignup, onLogin, onTerms, onPrivacy }) {
         ))}
       </div>
 
+      {/* Social proof */}
+      <div style={{ padding: "4rem 2rem", maxWidth: 860, margin: "0 auto", textAlign: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(255,255,255,0.35)", marginBottom: "2rem" }}>
+          Trusted by small teams everywhere
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16 }}>
+          {[
+            { quote: "Finally a CRM that doesn't take a week to learn. We were up and running in an hour.", name: "Sarah M.", role: "Sales Manager" },
+            { quote: "The pipeline view alone is worth it. We closed 40% more deals in our first month.", name: "James O.", role: "Founder" },
+            { quote: "Switched from HubSpot and never looked back. Half the price, all the features we actually use.", name: "Linda Z.", role: "VP of Sales" },
+          ].map(t => (
+            <div key={t.name} style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: "1.5rem", textAlign: "left" }}>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 1.7, marginBottom: "1rem" }}>"{t.quote}"</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#fff" }}>{t.name}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{t.role}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Pricing */}
       <div style={{ padding: "5rem 2rem", maxWidth: 860, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: "3rem" }}>
           <h2 style={{ fontSize: 34, fontWeight: 700, letterSpacing: "-0.8px", marginBottom: 12 }}>Simple, honest pricing</h2>
-          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)" }}>Start free for 14 days. No credit card required.</p>
+          <p style={{ fontSize: 15, color: "rgba(255,255,255,0.5)", marginBottom: "1.5rem" }}>Start free for 14 days. No credit card required.</p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <span style={{ fontSize: 14, color: annual ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.8)" }}>Monthly</span>
+            <button onClick={() => setAnnual(a => !a)} style={{ width: 44, height: 24, borderRadius: 12, background: annual ? "#185FA5" : "rgba(255,255,255,0.15)", border: "0.5px solid rgba(255,255,255,0.2)", cursor: "pointer", position: "relative", padding: 0 }}>
+              <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: annual ? 23 : 3, transition: "left 0.2s" }} />
+            </button>
+            <span style={{ fontSize: 14, color: annual ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.4)" }}>
+              Annual <span style={{ fontSize: 12, background: "#EAF3DE", color: "#3B6D11", padding: "2px 8px", borderRadius: 20, marginLeft: 4 }}>Save 2 months</span>
+            </span>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Starter */}
           <div style={{ background: "rgba(255,255,255,0.04)", border: "0.5px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "2rem" }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Starter</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
-              <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-1px" }}>$29</span>
+              <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-1px" }}>{annual ? "$24" : "$29"}</span>
               <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>/month</span>
             </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>Per company · billed monthly</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>{annual ? "Per company · billed annually" : "Per company · billed monthly"}</div>
             <button onClick={() => onSignup("starter")} style={{ width: "100%", padding: "10px", background: "transparent", border: "0.5px solid rgba(255,255,255,0.25)", color: "#fff", borderRadius: 9, fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit", marginBottom: "1.5rem" }}>
               Start free trial
             </button>
@@ -93,10 +123,10 @@ export function LandingPage({ onSignup, onLogin, onTerms, onPrivacy }) {
             <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: "#185FA5", color: "#fff", fontSize: 11, fontWeight: 600, padding: "3px 14px", borderRadius: 20 }}>Most popular</div>
             <div style={{ fontSize: 13, fontWeight: 600, color: "#378ADD", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Pro</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 6 }}>
-              <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-1px" }}>$99</span>
+              <span style={{ fontSize: 40, fontWeight: 700, letterSpacing: "-1px" }}>{annual ? "$82" : "$99"}</span>
               <span style={{ fontSize: 14, color: "rgba(255,255,255,0.5)" }}>/month</span>
             </div>
-            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>Per company · billed monthly</div>
+            <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginBottom: "1.5rem" }}>{annual ? "Per company · billed annually" : "Per company · billed monthly"}</div>
             <button onClick={() => onSignup("pro")} style={{ width: "100%", padding: "10px", background: "#185FA5", border: "none", color: "#fff", borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginBottom: "1.5rem" }}>
               Start free trial
             </button>

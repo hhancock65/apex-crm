@@ -113,6 +113,11 @@ export function SignupPage({ onSignup, onLogin, onTerms, onPrivacy, error, loadi
                   required
                   style={{ width: "100%", padding: "8px 12px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 9, background: "var(--card-bg)", color: "var(--text)", fontFamily: "inherit", outline: "none" }}
                 />
+                {field.key === "username" && (
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                    3–30 characters · letters, numbers, dots, dashes only · no spaces
+                  </div>
+                )}
               </div>
             ))}
 

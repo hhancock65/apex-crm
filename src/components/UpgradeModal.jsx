@@ -3,6 +3,7 @@ import { startCheckout, openBillingPortal } from "../lib/stripe";
 
 export function UpgradeModal({ isOpen, onClose, org, user }) {
   const [loading, setLoading] = useState(null);
+  const [annual, setAnnual]   = useState(false);
   const [error, setError] = useState("");
 
   if (!isOpen) return null;
@@ -39,6 +40,17 @@ export function UpgradeModal({ isOpen, onClose, org, user }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.3px" }}>Choose your plan</div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)", fontSize: 20 }}>×</button>
+        </div>
+
+        {/* Billing toggle */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginBottom: "1.25rem" }}>
+          <span style={{ fontSize: 13, color: annual ? "var(--text-muted)" : "var(--text)", fontWeight: annual ? 400 : 500 }}>Monthly</span>
+          <button onClick={() => setAnnual(a => !a)} style={{ width: 44, height: 24, borderRadius: 12, background: annual ? "#185FA5" : "var(--surface)", border: "0.5px solid var(--border-strong)", cursor: "pointer", position: "relative", transition: "background 0.2s", padding: 0 }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: annual ? 23 : 3, transition: "left 0.2s" }} />
+          </button>
+          <span style={{ fontSize: 13, color: annual ? "var(--text)" : "var(--text-muted)", fontWeight: annual ? 500 : 400 }}>
+            Annual <span style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "1px 7px", borderRadius: 20, marginLeft: 4 }}>2 months free</span>
+          </span>
         </div>
 
         {error && (
