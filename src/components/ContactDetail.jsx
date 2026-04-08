@@ -1,7 +1,7 @@
 import React from "react";
 import { Avatar, Badge, Card, SectionTitle, EmptyState, IconBtn } from "./UI";
 
-export function ContactDetail({ contact, deals, tasks, notes, onClose, onEdit, index = 0 }) {
+export function ContactDetail({ contact, deals, tasks, notes, onClose, onEdit, onAddDeal, index = 0 }) {
   if (!contact) return null;
 
   const contactDeals = deals.filter(d =>
@@ -72,7 +72,10 @@ export function ContactDetail({ contact, deals, tasks, notes, onClose, onEdit, i
 
           {/* Deals */}
           <div style={{ marginBottom: "1.25rem" }}>
-            <SectionTitle>Deals ({contactDeals.length})</SectionTitle>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase", color: "var(--color-text-secondary, #7A7875)" }}>Deals ({contactDeals.length})</div>
+              <button onClick={() => onAddDeal && onAddDeal(contact)} style={{ fontSize: 11, fontWeight: 500, color: "#185FA5", background: "#E6F1FB", border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>+ Add deal</button>
+            </div>
             <Card style={{ padding: contactDeals.length === 0 ? "0.75rem 1.25rem" : "0 1.25rem" }}>
               {contactDeals.length === 0
                 ? <EmptyState message="No deals linked yet." />

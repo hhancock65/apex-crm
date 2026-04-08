@@ -283,7 +283,7 @@ export default function App() {
             ) : (
               <>
                 {view === "dashboard" && <Dashboard contacts={store.contacts} deals={store.deals} tasks={store.tasks} stats={store.stats} onNavigate={v => { setView(v); setSearch(""); }} />}
-                {view === "contacts"  && <Contacts  contacts={store.contacts} deals={store.deals} tasks={store.tasks} notes={store.notes} addContact={store.addContact} updateContact={store.updateContact} deleteContact={store.deleteContact} search={search} />}
+                {view === "contacts"  && <Contacts  contacts={store.contacts} deals={store.deals} tasks={store.tasks} notes={store.notes} addContact={store.addContact} addDeal={store.addDeal} updateContact={store.updateContact} deleteContact={store.deleteContact} search={search} />}
                 {view === "pipeline"  && <Pipeline  deals={store.deals} contacts={store.contacts} addDeal={store.addDeal} updateDeal={store.updateDeal} deleteDeal={store.deleteDeal} updateDealStage={store.updateDealStage} />}
                 {view === "tasks"     && <Tasks     tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
                 {view === "notes"     && <Notes     notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}

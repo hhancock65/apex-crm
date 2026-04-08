@@ -6,7 +6,7 @@ import { Modal, FormGroup, Input, Select } from "./Modal";
 const STATUSES = ["Lead", "Qualified", "Proposal", "Won", "Lost"];
 function blank() { return { name: "", company: "", email: "", phone: "", status: "Lead" }; }
 
-export function Contacts({ contacts, deals, tasks, notes, addContact, updateContact, deleteContact, search }) {
+export function Contacts({ contacts, deals, tasks, notes, addContact, addDeal, updateContact, deleteContact, search }) {
   const [addOpen, setAddOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
@@ -18,6 +18,17 @@ export function Contacts({ contacts, deals, tasks, notes, addContact, updateCont
   });
 
   function set(k) { return v => setForm(f => ({ ...f, [k]: v })); }
+  function setDeal(k) { return v => setDealForm(f => ({ ...f, [k]: v })); }
+  function handleAddDeal(contact) {
+    setDealForm({ name: `${contact.company || contact.name} deal`, company: contact.company || "", contact_name: contact.name, value: "", stage: "Lead", close_date: "" });
+    setDealOpen(true);
+    setSelectedContact(null);
+  }
+  function saveDeal() {
+    if (!dealForm.name.trim()) return;
+    addDeal && addDeal({ ...dealForm, value: Number(dealForm.value) || 0 });
+    setDealOpen(false);
+  }
 
   function openAdd() { setForm(blank()); setAddOpen(true); }
   function openEdit(c) { setForm({ name: c.name, company: c.company || "", email: c.email || "", phone: c.phone || "", status: c.status }); setEditTarget(c); }
@@ -116,8 +127,18 @@ export function Contacts({ contacts, deals, tasks, notes, addContact, updateCont
           notes={notes || []}
           onClose={() => setSelectedContact(null)}
           onEdit={() => { openEdit(selectedContact.contact); setSelectedContact(null); }}
+          onAddDeal={handleAddDeal}
         />
       )}
+
+      {/* Quick add deal modal */}
+      <Modal isOpen={dealOpen} title="Add deal for contact" onClose={() => setDealOpen(false)} onSave={saveDeal}>
+        <FormGroup label="Deal name *"><Input value={dealForm.name} onChange={setDeal("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
+        <FormGroup label="Company"><Input value={dealForm.company} onChange={setDeal("company")} placeholder="Company name" /></FormGroup>
+        <FormGroup label="Contact"><Input value={dealForm.contact_name} onChange={setDeal("contact_name")} placeholder="Contact name" /></FormGroup>
+        <FormGroup label="Value ($)"><Input value={dealForm.value} onChange={setDeal("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
+        <FormGroup label="Stage"><Select value={dealForm.stage} onChange={setDeal("stage")} options={["Lead","Qualified","Proposal","Won"]} /></FormGroup>
+      </Modal>
 
       {/* Edit modal */}
       <Modal isOpen={!!editTarget} title="Edit contact" onClose={() => setEditTarget(null)} onSave={saveEdit}>
