@@ -1,4 +1,5 @@
 import React from "react";
+import { OnboardingChecklist } from "./Onboarding";
 import { Avatar, Badge, Card, SectionTitle, EmptyState } from "./UI";
 
 function StatCard({ label, value, sub, color }) {
@@ -14,7 +15,7 @@ function StatCard({ label, value, sub, color }) {
 const STAGES = ["Lead", "Qualified", "Proposal", "Won"];
 const STAGE_COLORS = { Lead: "#EF9F27", Qualified: "#378ADD", Proposal: "#7F77DD", Won: "#639922" };
 
-export function Dashboard({ contacts, deals, tasks, stats }) {
+export function Dashboard({ contacts, deals, tasks, stats, onNavigate }) {
   const recentContacts = contacts.slice(0, 4);
   const pendingTasks = tasks.filter(t => !t.done).slice(0, 4);
 
@@ -28,6 +29,7 @@ export function Dashboard({ contacts, deals, tasks, stats }) {
 
   return (
     <div>
+      <OnboardingChecklist stats={stats} onNavigate={onNavigate} />
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12, marginBottom: "1.5rem" }}>
         <StatCard label="Total contacts" value={stats.totalContacts} sub="in CRM" />

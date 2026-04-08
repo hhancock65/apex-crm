@@ -63,7 +63,7 @@ function DealCard({ deal, onDelete, onEdit, onMoveStage, onDragStart }) {
   );
 }
 
-export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealStage }) {
+export function Pipeline({ deals, contacts = [], addDeal, updateDeal, deleteDeal, updateDealStage }) {
   const [open, setOpen] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(blank());
@@ -123,20 +123,40 @@ export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealSta
       <Modal isOpen={open} title="Add deal" onClose={() => setOpen(false)} onSave={saveAdd}>
         <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
         <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
-        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
-        <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
-        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
-        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
-      </Modal>
+        <FormGroup label="Contact">
+        <select value={form.contact_name} onChange={e => set("contact_name")(e.target.value)}
+          style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none" }}>
+          <option value="">— Select a contact —</option>
+          {contacts.map(c => <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ""}</option>)}
+          <option value="__custom__">Other (type name)</option>
+        </select>
+        {form.contact_name === "__custom__" && (
+          <input value={form._customContact || ""} onChange={e => set("_customContact")(e.target.value)} placeholder="Type contact name" style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none", marginTop: 6 }} />
+        )}
+      </FormGroup>
+      <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
+      <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+      <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+    </Modal>
 
-      <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}>
-        <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
-        <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
-        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
-        <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
-        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
-        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
-      </Modal>
+    <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}>
+      <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
+      <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
+      <FormGroup label="Contact">
+        <select value={form.contact_name} onChange={e => set("contact_name")(e.target.value)}
+          style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none" }}>
+          <option value="">— Select a contact —</option>
+          {contacts.map(c => <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ""}</option>)}
+          <option value="__custom__">Other (type name)</option>
+        </select>
+        {form.contact_name === "__custom__" && (
+          <input value={form._customContact || ""} onChange={e => set("_customContact")(e.target.value)} placeholder="Type contact name" style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none", marginTop: 6 }} />
+        )}
+      </FormGroup>
+      <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
+      <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+      <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+    </Modal>
     </div>
   );
 }

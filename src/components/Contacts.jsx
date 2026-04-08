@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { Avatar, Badge, Card, SectionTitle, EmptyState, IconBtn } from "./UI";
+import { ContactDetail } from "./ContactDetail";
 import { Modal, FormGroup, Input, Select } from "./Modal";
 
 const STATUSES = ["Lead", "Qualified", "Proposal", "Won", "Lost"];
 function blank() { return { name: "", company: "", email: "", phone: "", status: "Lead" }; }
 
-export function Contacts({ contacts, addContact, updateContact, deleteContact, search }) {
+export function Contacts({ contacts, deals, tasks, notes, addContact, updateContact, deleteContact, search }) {
   const [addOpen, setAddOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(blank());
 
@@ -72,7 +74,7 @@ export function Contacts({ contacts, addContact, updateContact, deleteContact, s
           : filtered.map((c, i) => (
             <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 0", borderBottom: i < filtered.length - 1 ? "0.5px solid var(--border)" : "none" }}>
               <Avatar name={c.name} index={i} />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, cursor: "pointer" }} onClick={() => setSelectedContact({ contact: c, index: i })}>
                 <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{c.name}</div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
                   {c.company}{c.company && c.email ? " · " : ""}<span style={{ color: "var(--accent)" }}>{c.email}</span>
@@ -103,6 +105,19 @@ export function Contacts({ contacts, addContact, updateContact, deleteContact, s
         <FormGroup label="Phone"><Input value={form.phone} onChange={set("phone")} placeholder="(555) 000-0000" /></FormGroup>
         <FormGroup label="Status"><Select value={form.status} onChange={set("status")} options={STATUSES} /></FormGroup>
       </Modal>
+
+      {/* Contact detail panel */}
+      {selectedContact && (
+        <ContactDetail
+          contact={selectedContact.contact}
+          index={selectedContact.index}
+          deals={deals || []}
+          tasks={tasks || []}
+          notes={notes || []}
+          onClose={() => setSelectedContact(null)}
+          onEdit={() => { openEdit(selectedContact.contact); setSelectedContact(null); }}
+        />
+      )}
 
       {/* Edit modal */}
       <Modal isOpen={!!editTarget} title="Edit contact" onClose={() => setEditTarget(null)} onSave={saveEdit}>

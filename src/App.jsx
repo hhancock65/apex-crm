@@ -14,6 +14,7 @@ import { TrialBanner, ExpiredScreen } from "./components/TrialBanner";
 import { UpgradeModal } from "./components/UpgradeModal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { TermsPage, PrivacyPage } from "./components/LegalPages";
+import { DashboardSkeleton, ContactsSkeleton, PipelineSkeleton, GenericSkeleton } from "./components/Skeleton";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
@@ -59,6 +60,25 @@ export default function App() {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
     localStorage.setItem("crm_dark", darkMode);
   }, [darkMode]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKey(e) {
+      // Cmd/Ctrl + K — focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        document.querySelector(".topbar-search")?.focus();
+      }
+      // Cmd/Ctrl + 1-6 — navigate views
+      if ((e.metaKey || e.ctrlKey) && ["1","2","3","4","5","6"].includes(e.key)) {
+        const views = ["dashboard","contacts","pipeline","tasks","notes","users"];
+        const idx = parseInt(e.key) - 1;
+        if (views[idx]) { e.preventDefault(); setView(views[idx]); setSearch(""); }
+      }
+    }
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, []);
 
   useEffect(() => {
     if (!auth.initializing && auth.user) setScreen("app");
@@ -255,12 +275,21 @@ export default function App() {
           </div>
 
           <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
-            {view === "dashboard" && <Dashboard contacts={store.contacts} deals={store.deals} tasks={store.tasks} stats={store.stats} />}
-            {view === "contacts"  && <Contacts  contacts={store.contacts} addContact={store.addContact} updateContact={store.updateContact} deleteContact={store.deleteContact} search={search} />}
-            {view === "pipeline"  && <Pipeline  deals={store.deals} addDeal={store.addDeal} updateDeal={store.updateDeal} deleteDeal={store.deleteDeal} updateDealStage={store.updateDealStage} />}
-            {view === "tasks"     && <Tasks     tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
-            {view === "notes"     && <Notes     notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}
-            {view === "users"     && <Users     users={store.users} currentUser={auth.user} updateUserProfile={store.updateUserProfile} />}
+            {store.loadingData ? (
+              view === "dashboard" ? <DashboardSkeleton /> :
+              view === "contacts"  ? <ContactsSkeleton /> :
+              view === "pipeline"  ? <PipelineSkeleton /> :
+              <GenericSkeleton />
+            ) : (
+              <>
+                {view === "dashboard" && <Dashboard contacts={store.contacts} deals={store.deals} tasks={store.tasks} stats={store.stats} onNavigate={v => { setView(v); setSearch(""); }} />}
+                {view === "contacts"  && <Contacts  contacts={store.contacts} deals={store.deals} tasks={store.tasks} notes={store.notes} addContact={store.addContact} updateContact={store.updateContact} deleteContact={store.deleteContact} search={search} />}
+                {view === "pipeline"  && <Pipeline  deals={store.deals} contacts={store.contacts} addDeal={store.addDeal} updateDeal={store.updateDeal} deleteDeal={store.deleteDeal} updateDealStage={store.updateDealStage} />}
+                {view === "tasks"     && <Tasks     tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
+                {view === "notes"     && <Notes     notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}
+                {view === "users"     && <Users     users={store.users} currentUser={auth.user} updateUserProfile={store.updateUserProfile} />}
+              </>
+            )}
           </div>
         </div>
       </div>
