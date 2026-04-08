@@ -11,6 +11,8 @@ export function Contacts({ contacts, deals, tasks, notes, addContact, addDeal, u
   const [selectedContact, setSelectedContact] = useState(null);
   const [editTarget, setEditTarget] = useState(null);
   const [form, setForm] = useState(blank());
+  const [dealOpen, setDealOpen] = useState(false);
+  const [dealForm, setDealForm] = useState({ name: "", company: "", contact_name: "", value: "", stage: "Lead", close_date: "" });
 
   const filtered = contacts.filter(c => {
     const q = search.toLowerCase();
