@@ -11,7 +11,6 @@ export function useAuth() {
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
 
   useEffect(() => {
-    // getSession also handles the #access_token hash from email confirmation
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) { setUser(session.user); fetchProfile(session.user.id); }
       else setInitializing(false);
@@ -49,44 +48,47 @@ export function useAuth() {
     setInitializing(false);
   }
 
-  // Login — uses real email directly (stored in Supabase auth)
-  // Users sign in with username, but we look it up via a public RPC function
+  // Login — resolves username → real email via RPC, then authenticates
   async function login(username, password) {
     setError(""); setLoading(true);
     const trimmed = username.trim().toLowerCase();
 
-    // Call a public Supabase function to resolve username → email
-    // This bypasses RLS since it's a SECURITY DEFINER function
-    const { data: emailData, error: rpcError } = await supabase
-      .rpc("get_email_for_username_v2", { p_username: trimmed });
+    // Step 1: resolve username to real email via SECURITY DEFINER function
+    let emailToUse = null;
+    try {
+      const { data: emailData } = await supabase
+        .rpc("get_email_for_username_v2", { p_username: trimmed });
+      if (emailData) emailToUse = emailData;
+    } catch (rpcErr) {
+      console.warn("RPC lookup failed, trying fallback:", rpcErr);
+    }
 
-    let emailToUse = emailData || null;
+    // Step 2: if RPC failed, try direct profile lookup (may fail due to RLS)
+    if (!emailToUse) {
+      try {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("real_email")
+          .eq("username", trimmed)
+          .single();
+        if (profileData?.real_email) emailToUse = profileData.real_email;
+      } catch (_) {}
+    }
 
-    // Fallback for legacy users created with @apexcrm.app
-    if (!emailToUse || rpcError) {
+    // Step 3: if still nothing, they might be a legacy user
+    if (!emailToUse) {
       emailToUse = `${trimmed}@apexcrm.app`;
     }
 
+    // Attempt login with resolved email
     const { error: authError } = await supabase.auth.signInWithPassword({
       email: emailToUse,
       password,
     });
 
-    // If first attempt fails, try the other format
+    // If that failed and we used a real email, don't try again
     if (authError) {
-      const fallback = emailToUse.includes("@apexcrm.app")
-        ? null
-        : `${trimmed}@apexcrm.app`;
-
-      if (fallback) {
-        const { error: fallbackError } = await supabase.auth.signInWithPassword({
-          email: fallback,
-          password,
-        });
-        if (!fallbackError) { setLoading(false); return true; }
-      }
-
-      setError("Invalid username or password.");
+      setError("Invalid username or password. Please check your credentials.");
       setLoading(false);
       return false;
     }
@@ -95,7 +97,7 @@ export function useAuth() {
     return true;
   }
 
-  // Self-serve signup — uses REAL email for Supabase auth
+  // Self-serve signup — org + profile created by DB trigger
   async function signup({ name, username, email, orgName, password }) {
     setError(""); setLoading(true);
     const trimmed   = username.trim().toLowerCase();
@@ -105,21 +107,13 @@ export function useAuth() {
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "");
 
-    // Use explicit redirect URL — must match Supabase URL Configuration exactly
     const redirectUrl = process.env.REACT_APP_SITE_URL || window.location.origin;
 
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email:    trimEmail,
       password,
       options: {
-        // Pass all org info as metadata — the database trigger creates
-        // the org and profile automatically when the user is created
-        data: {
-          name,
-          username:  trimmed,
-          org_name:  orgName,
-          org_slug:  slug,
-        },
+        data: { name, username: trimmed, org_name: orgName, org_slug: slug },
         emailRedirectTo: redirectUrl,
       },
     });
@@ -130,7 +124,7 @@ export function useAuth() {
       return false;
     }
 
-    // Email confirmation required — org+profile already created by trigger
+    // Email confirmation required — trigger already created org+profile
     if (authData?.user && !authData.session) {
       setLoading(false);
       setNeedsConfirmation(true);
@@ -141,7 +135,9 @@ export function useAuth() {
     return true;
   }
 
-  async function logout() { await supabase.auth.signOut(); }
+  async function logout() {
+    await supabase.auth.signOut();
+  }
 
   const trialDaysLeft  = org ? Math.max(0, Math.ceil((new Date(org.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24))) : 0;
   const isTrialExpired = org?.plan === "trial" && trialDaysLeft === 0;
