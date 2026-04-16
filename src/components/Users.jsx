@@ -13,10 +13,10 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
   const [inviteError, setInviteError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState(null);
 
-  const isAdmin     = currentUser?.role === "Admin";
-  const seatsLimit  = org?.seats_limit || 2;
-  const seatsUsed   = users.length;
-  const atLimit     = seatsLimit !== -1 && seatsUsed >= seatsLimit;
+  const isAdmin    = currentUser?.role === "Admin";
+  const seatsLimit = org?.seats_limit ?? 2;
+  const seatsUsed  = users.length;
+  const atLimit    = seatsLimit !== -1 && seatsUsed >= seatsLimit;
 
   function setEdit(k)   { return v => setEditForm(f => ({ ...f, [k]: v })); }
   function setInvite(k) { return v => setInviteForm(f => ({ ...f, [k]: v })); }
@@ -33,21 +33,23 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
   async function sendInvite() {
     setInviteError(""); setInviteLoading(true);
     const trimmed = inviteForm.username.trim().toLowerCase();
+
+    if (!inviteForm.name.trim()) { setInviteError("Please enter a full name."); setInviteLoading(false); return; }
     if (!/^[a-z0-9._-]{3,30}$/.test(trimmed)) {
-      setInviteError("Username: 3–30 chars, letters/numbers/dots/dashes only.");
+      setInviteError("Username: 3–30 chars, letters/numbers/dots/dashes only. No spaces.");
       setInviteLoading(false); return;
     }
-    if (!inviteForm.email.includes("@")) {
+    if (!/\S+@\S+\.\S+/.test(inviteForm.email)) {
       setInviteError("Please enter a valid email address.");
       setInviteLoading(false); return;
     }
 
     try {
       const res = await fetch("/api/invite-user", {
-        method: "POST",
+        method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name:          inviteForm.name,
+        body:    JSON.stringify({
+          name:          inviteForm.name.trim(),
           username:      trimmed,
           email:         inviteForm.email.trim().toLowerCase(),
           role:          inviteForm.role,
@@ -56,14 +58,11 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setInviteError(data.error || "Failed to invite user.");
-        setInviteLoading(false); return;
-      }
-      setInviteSuccess({ ...data, username: trimmed, name: inviteForm.name });
+      if (!res.ok) { setInviteError(data.error || "Failed to send invitation."); setInviteLoading(false); return; }
+      setInviteSuccess({ email: inviteForm.email, name: inviteForm.name });
       setInviteForm({ name: "", username: "", email: "", role: "User" });
     } catch (err) {
-      setInviteError("Network error. Please try again.");
+      setInviteError("Network error. Please check your connection and try again.");
     }
     setInviteLoading(false);
   }
@@ -78,13 +77,13 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <div>
-          <SectionTitle>Team members ({seatsUsed}{seatsLimit !== -1 ? ` / ${seatsLimit}` : ""})</SectionTitle>
-        </div>
+        <SectionTitle>
+          Team members ({seatsUsed}{seatsLimit !== -1 ? ` / ${seatsLimit}` : ""})
+        </SectionTitle>
         {isAdmin && (
           <button onClick={() => setInviteOpen(true)} disabled={atLimit}
             className="btn btn-primary"
-            title={atLimit ? `You've reached your ${seatsLimit}-user limit. Upgrade to Pro for unlimited members.` : ""}
+            title={atLimit ? `Seat limit reached. Upgrade to Pro for unlimited members.` : "Invite a team member"}
             style={{ opacity: atLimit ? 0.5 : 1, cursor: atLimit ? "not-allowed" : "pointer" }}
           >
             + Invite member
@@ -92,11 +91,9 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
         )}
       </div>
 
-      {/* Seats limit warning */}
       {isAdmin && atLimit && org?.plan !== "pro" && (
         <div style={{ background: "#FAEEDA", border: "0.5px solid #EF9F27", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#854F0B" }}>
-          You've reached your {seatsLimit}-user limit on the {org?.plan} plan.{" "}
-          <strong>Upgrade to Pro</strong> for unlimited team members.
+          You've reached your {seatsLimit}-user limit on the {org?.plan} plan. Upgrade to Pro for unlimited members.
         </div>
       )}
 
@@ -131,45 +128,46 @@ export function Users({ users, currentUser, org, updateUserProfile }) {
       </Card>
 
       {/* Invite modal */}
-      <Modal isOpen={inviteOpen} title="Invite team member" onClose={closeInvite} onSave={inviteSuccess ? closeInvite : sendInvite}>
+      <Modal isOpen={inviteOpen} title="Invite team member" onClose={closeInvite}
+        onSave={inviteSuccess ? closeInvite : sendInvite}
+        saveLabel={inviteSuccess ? "Done" : inviteLoading ? "Sending..." : "Send invitation"}
+      >
         {inviteSuccess ? (
-          <div>
+          <div style={{ textAlign: "center", padding: "0.5rem 0" }}>
             <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#EAF3DE", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="#3B6D11" strokeWidth="1.8"><path d="M4 11l5 5L18 6" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>{inviteSuccess.name} has been invited!</div>
-              <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.6 }}>A welcome email with their login credentials has been sent. They can sign in immediately.</div>
-            </div>
-            <div style={{ background: "var(--surface)", borderRadius: 9, padding: "12px 14px", fontSize: 13 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ color: "var(--text-muted)" }}>Username</span>
-                <code style={{ color: "var(--text)", fontFamily: "monospace" }}>{inviteSuccess.username}</code>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "var(--text-muted)" }}>Temp password</span>
-                <code style={{ color: "var(--text)", fontFamily: "monospace" }}>{inviteSuccess.tempPassword}</code>
-              </div>
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 10, textAlign: "center" }}>
-              Share these credentials if the email doesn't arrive. They should change their password after first login.
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>Invitation sent!</div>
+            <div style={{ fontSize: 13, color: "var(--text-muted)", lineHeight: 1.7 }}>
+              An invitation email has been sent to <strong style={{ color: "var(--text)" }}>{inviteSuccess.email}</strong>.
+              They'll receive a secure link to set their password and log in.
             </div>
           </div>
         ) : (
           <>
-            <FormGroup label="Full name *"><Input value={inviteForm.name} onChange={setInvite("name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
-            <FormGroup label="Work email *"><Input value={inviteForm.email} onChange={setInvite("email")} placeholder="sarah@company.com" type="email" /></FormGroup>
-            <FormGroup label="Username *">
-              <Input value={inviteForm.username} onChange={v => setInvite("username")(v.toLowerCase())} placeholder="e.g. sarah (used to sign in)" />
-              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>3–30 chars · letters, numbers, dots, dashes · no spaces</div>
+            <FormGroup label="Full name *">
+              <Input value={inviteForm.name} onChange={setInvite("name")} placeholder="e.g. Sarah Mitchell" />
             </FormGroup>
-            <FormGroup label="Role"><Select value={inviteForm.role} onChange={setInvite("role")} options={ROLES} /></FormGroup>
+            <FormGroup label="Work email *">
+              <Input value={inviteForm.email} onChange={setInvite("email")} placeholder="sarah@company.com" type="email" />
+            </FormGroup>
+            <FormGroup label="Username *">
+              <Input value={inviteForm.username} onChange={v => setInvite("username")(v.toLowerCase().replace(/\s/g, ""))} placeholder="e.g. sarah" />
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                3–30 chars · letters, numbers, dots, dashes · no spaces
+              </div>
+            </FormGroup>
+            <FormGroup label="Role">
+              <Select value={inviteForm.role} onChange={setInvite("role")} options={ROLES} />
+            </FormGroup>
             {inviteError && (
               <div style={{ fontSize: 12, color: "#A32D2D", background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 7, padding: "8px 12px", marginTop: 8 }}>
                 {inviteError}
               </div>
             )}
-            {inviteLoading && <div style={{ fontSize: 13, color: "var(--text-muted)", textAlign: "center", marginTop: 8 }}>Creating account and sending email...</div>}
+            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10, background: "var(--surface)", borderRadius: 8, padding: "8px 12px" }}>
+              The invited user will receive a secure email with a link to set their own password.
+            </div>
           </>
         )}
       </Modal>

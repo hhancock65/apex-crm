@@ -1,8 +1,12 @@
 // api/invite-user.js
-// Creates a new team member under an existing org
-// Only callable by Admins — verified server-side
+// SECURITY FIXES:
+// 1. Uses Supabase inviteUserByEmail (magic link) instead of temp passwords
+// 2. Rate limited to 5 invites per hour per IP
+// 3. Origin validated — only callable from your app
+// 4. Admin role verified server-side
 
 const { createClient } = require("@supabase/supabase-js");
+const { rateLimit, checkOrigin, setCORSHeaders } = require("./_middleware");
 
 const supabase = createClient(
   process.env.REACT_APP_SUPABASE_URL,
@@ -10,11 +14,15 @@ const supabase = createClient(
 );
 
 module.exports = async (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  setCORSHeaders(req, res);
   if (req.method === "OPTIONS") return res.status(200).end();
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  // Rate limit: max 5 invites per hour per IP
+  if (!rateLimit(req, res, { maxRequests: 5, windowMs: 60 * 60 * 1000 })) return;
+
+  // CSRF check
+  if (!checkOrigin(req, res)) return;
 
   const { name, username, email, role, orgId, inviterUserId } = req.body;
 
@@ -22,21 +30,37 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Verify the inviter is an Admin of this org
-  const { data: inviter } = await supabase
+  // Validate email format
+  if (!/\S+@\S+\.\S+/.test(email)) {
+    return res.status(400).json({ error: "Invalid email address" });
+  }
+
+  // Validate username format
+  if (!/^[a-z0-9._-]{3,30}$/.test(username.toLowerCase())) {
+    return res.status(400).json({ error: "Username: 3-30 chars, letters/numbers/dots/dashes only" });
+  }
+
+  // SERVER-SIDE: Verify the inviter is an Admin of this org
+  const { data: inviter, error: inviterErr } = await supabase
     .from("profiles")
     .select("role, org_id")
     .eq("id", inviterUserId)
     .single();
 
-  if (!inviter || inviter.role !== "Admin" || inviter.org_id !== orgId) {
+  if (inviterErr || !inviter) {
+    return res.status(403).json({ error: "Could not verify your account" });
+  }
+  if (inviter.role !== "Admin") {
     return res.status(403).json({ error: "Only admins can invite team members" });
   }
+  if (inviter.org_id !== orgId) {
+    return res.status(403).json({ error: "You can only invite members to your own organization" });
+  }
 
-  // Check plan limits
+  // Check plan seat limits
   const { data: org } = await supabase
     .from("organizations")
-    .select("plan, seats_limit")
+    .select("plan, seats_limit, name")
     .eq("id", orgId)
     .single();
 
@@ -52,41 +76,44 @@ module.exports = async (req, res) => {
     });
   }
 
-  // Check username not already taken
+  // Check username not already taken globally
   const { data: existingUsername } = await supabase
     .from("profiles")
     .select("id")
     .eq("username", username.toLowerCase())
-    .single();
+    .maybeSingle();
 
   if (existingUsername) {
     return res.status(400).json({ error: "That username is already taken. Please choose another." });
   }
 
-  // Generate a temporary password
-  const tempPassword = Math.random().toString(36).slice(-10) + "Ax1!";
-
-  // Create the auth user
-  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+  // SECURITY: Use Supabase magic link invite instead of temp passwords
+  // User clicks a link in their email to set their own password
+  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
     email,
-    password: tempPassword,
-    email_confirm: true, // Auto-confirm so they can log in immediately
-    user_metadata: {
-      name,
-      username: username.toLowerCase(),
-      org_name: "", // Will be set via profile
-    },
-  });
+    {
+      data: {
+        name,
+        username: username.toLowerCase(),
+      },
+      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || "https://apex-crm-jhdm.vercel.app"}/`,
+    }
+  );
 
-  if (authError) {
-    return res.status(400).json({ error: authError.message });
+  if (inviteError) {
+    // Handle already-registered email
+    if (inviteError.message?.includes("already registered")) {
+      return res.status(400).json({ error: "That email is already registered in Apex CRM." });
+    }
+    console.error("Invite error:", inviteError);
+    return res.status(400).json({ error: inviteError.message });
   }
 
-  // Create their profile in the same org
+  // Create their profile in the org
   const { error: profileError } = await supabase
     .from("profiles")
     .upsert({
-      id:         authData.user.id,
+      id:         inviteData.user.id,
       username:   username.toLowerCase(),
       name,
       role:       role || "User",
@@ -95,34 +122,16 @@ module.exports = async (req, res) => {
     });
 
   if (profileError) {
-    // Cleanup the auth user if profile creation failed
-    await supabase.auth.admin.deleteUser(authData.user.id);
-    return res.status(500).json({ error: "Failed to create user profile" });
+    // Cleanup on failure
+    await supabase.auth.admin.deleteUser(inviteData.user.id);
+    console.error("Profile creation error:", profileError);
+    return res.status(500).json({ error: "Failed to create user profile. Please try again." });
   }
 
-  // Send welcome email with credentials via Resend
-  try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://apex-crm-jhdm.vercel.app";
-    await fetch(`${appUrl}/api/send-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.INTERNAL_API_SECRET}`,
-      },
-      body: JSON.stringify({
-        type: "team_invite",
-        to: email,
-        data: { name, username: username.toLowerCase(), tempPassword, appUrl, inviterName: "" },
-      }),
-    });
-  } catch (e) {
-    console.error("Failed to send invite email:", e);
-    // Don't fail the whole request if email fails
-  }
-
+  // Success — no temp password exposed
   res.status(200).json({
-    success: true,
-    userId: authData.user.id,
-    tempPassword, // Return so admin can share it if email fails
+    success:  true,
+    userId:   inviteData.user.id,
+    message:  `Invitation sent to ${email}. They will receive a link to set their password and log in.`,
   });
 };
