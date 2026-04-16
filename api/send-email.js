@@ -1,164 +1,160 @@
 // api/send-email.js
-// Vercel serverless function — sends transactional emails via Resend
 const { Resend } = require("resend");
-
 const resend = new Resend(process.env.RESEND_API_KEY);
-const FROM   = process.env.EMAIL_FROM || "Apex CRM <noreply@apexcrm.com>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://your-app.vercel.app";
 
-// ── Email templates ──────────────────────────────────────
-function welcomeEmail({ name, orgName, plan, trialDays = 14 }) {
+// ── Email templates ───────────────────────────────────────────
+
+function welcomeEmail({ name, orgName }) {
   return {
     subject: `Welcome to Apex CRM, ${name}!`,
     html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#1A1917">
-        <div style="font-size:20px;font-weight:700;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
-        <h1 style="font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:12px">Welcome, ${name}!</h1>
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px">
+        <div style="font-size:20px;font-weight:700;color:#1A1917;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <h1 style="font-size:24px;font-weight:700;color:#1A1917;margin-bottom:12px">Welcome aboard, ${name}!</h1>
         <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
-          Your <strong>${orgName}</strong> workspace is ready. You're on the <strong>${plan === "pro" ? "Pro" : "Starter"} trial</strong> — 
-          ${trialDays} days free, no credit card required.
+          Your account for <strong>${orgName}</strong> is all set. You have 14 days to explore everything Apex CRM has to offer — no credit card needed.
         </p>
-        <a href="${APP_URL}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
-          Open your CRM →
-        </a>
-        <div style="border-top:1px solid #F1F0EE;padding-top:24px">
-          <p style="font-size:13px;color:#7A7875;margin-bottom:8px"><strong>Here's how to get started:</strong></p>
-          <ol style="font-size:13px;color:#7A7875;line-height:2;padding-left:20px">
-            <li>Add your first contacts</li>
-            <li>Create deals in the pipeline</li>
-            <li>Invite your team under the Team tab</li>
-          </ol>
-        </div>
-        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
-      </div>
-    `,
-  };
-}
-
-function trialWarningEmail({ name, orgName, daysLeft, plan }) {
-  const urgent = daysLeft <= 3;
-  const accentColor = urgent ? "#E24B4A" : "#EF9F27";
-  return {
-    subject: urgent
-      ? `⚠️ Your Apex CRM trial expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`
-      : `Your Apex CRM trial ends in ${daysLeft} days`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#1A1917">
-        <div style="font-size:20px;font-weight:700;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
-        <div style="background:${urgent ? "#FCEBEB" : "#FAEEDA"};border-radius:10px;padding:20px 24px;margin-bottom:28px">
-          <p style="font-size:15px;font-weight:600;color:${accentColor};margin:0 0 6px">
-            ${urgent ? "⚠️" : "⏳"} ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left in your trial
-          </p>
-          <p style="font-size:13px;color:${accentColor};margin:0;opacity:0.8">
-            Upgrade now to keep ${orgName}'s data and continue without interruption.
-          </p>
-        </div>
-        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
-          Hi ${name}, your free trial of Apex CRM ends in <strong>${daysLeft} day${daysLeft !== 1 ? "s" : ""}</strong>. 
-          After that your account will be locked — but all your data is safe and waiting.
-        </p>
-        <a href="${APP_URL}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
-          Upgrade now — from $29/mo →
-        </a>
-        <div style="border-top:1px solid #F1F0EE;padding-top:20px">
-          <p style="font-size:13px;color:#7A7875;line-height:1.7">
-            Questions? Just reply to this email and we'll help you out.
-          </p>
-        </div>
-        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
-      </div>
-    `,
-  };
-}
-
-function paymentConfirmEmail({ name, orgName, plan, amount }) {
-  return {
-    subject: `Payment confirmed — Apex CRM ${plan === "pro" ? "Pro" : "Starter"}`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#1A1917">
-        <div style="font-size:20px;font-weight:700;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
-        <div style="background:#EAF3DE;border-radius:10px;padding:20px 24px;margin-bottom:28px">
-          <p style="font-size:15px;font-weight:600;color:#3B6D11;margin:0 0 4px">✓ Payment confirmed</p>
-          <p style="font-size:13px;color:#3B6D11;margin:0;opacity:0.8">${orgName} is now on the ${plan === "pro" ? "Pro" : "Starter"} plan</p>
-        </div>
-        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:16px">
-          Hi ${name}, thanks for subscribing! Your payment of <strong>$${amount}/month</strong> was successful.
-        </p>
-        <a href="${APP_URL}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
           Open Apex CRM →
         </a>
-        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM · Manage billing at any time from your account settings.</p>
-      </div>
-    `,
+        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
+      </div>`,
   };
 }
 
-function teamInviteEmail({ name, username, tempPassword, appUrl, inviterName }) {
+function trialWarningEmail({ name, daysLeft, orgName }) {
+  const urgent = daysLeft <= 3;
+  return {
+    subject: urgent
+      ? `⚠️ Only ${daysLeft} day${daysLeft !== 1 ? "s" : ""} left in your Apex CRM trial`
+      : `Your Apex CRM trial ends in ${daysLeft} days`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px">
+        <div style="font-size:20px;font-weight:700;color:#1A1917;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <h1 style="font-size:24px;font-weight:700;color:#1A1917;margin-bottom:12px">
+          ${urgent ? `⚠️ Your trial ends in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}` : `Your trial ends in ${daysLeft} days`}
+        </h1>
+        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
+          Hi ${name}, your free trial for <strong>${orgName}</strong> is almost over.
+          Upgrade now to keep all your contacts, deals, and data — and continue closing more business.
+        </p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}?upgrade=true" style="display:inline-block;background:${urgent ? "#E24B4A" : "#185FA5"};color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
+          Choose a plan →
+        </a>
+        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
+      </div>`,
+  };
+}
+
+function paymentConfirmEmail({ name, plan, orgName }) {
+  return {
+    subject: `Payment confirmed — Welcome to Apex CRM ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px">
+        <div style="font-size:20px;font-weight:700;color:#1A1917;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <h1 style="font-size:24px;font-weight:700;color:#1A1917;margin-bottom:12px">Payment confirmed!</h1>
+        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
+          Hi ${name}, your payment was successful. <strong>${orgName}</strong> is now on the
+          <strong>${plan.charAt(0).toUpperCase() + plan.slice(1)}</strong> plan — all features are unlocked.
+        </p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
+          Open Apex CRM →
+        </a>
+        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM · You can manage your billing anytime from Settings.</p>
+      </div>`,
+  };
+}
+
+function paymentFailedEmail({ name, orgName, plan, graceEndDate, billingUrl }) {
+  return {
+    subject: `Action required — Payment failed for your Apex CRM account`,
+    html: `
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px">
+        <div style="font-size:20px;font-weight:700;color:#1A1917;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:16px;margin-bottom:24px">
+          <div style="font-size:14px;font-weight:600;color:#A32D2D;margin-bottom:4px">Payment failed</div>
+          <div style="font-size:13px;color:#A32D2D">We were unable to charge the card on file for your ${plan} subscription.</div>
+        </div>
+        <h1 style="font-size:22px;font-weight:700;color:#1A1917;margin-bottom:12px">Hi ${name}, please update your payment</h1>
+        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:8px">
+          Your <strong>${orgName}</strong> account will remain active until <strong>${graceEndDate}</strong>.
+          After that, your account will be paused and you'll lose access to your data.
+        </p>
+        <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
+          To keep your account active, please update your payment method before ${graceEndDate}.
+        </p>
+        <a href="${billingUrl || process.env.NEXT_PUBLIC_APP_URL}" style="display:inline-block;background:#E24B4A;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:24px">
+          Update payment method →
+        </a>
+        <p style="font-size:13px;color:#7A7875;line-height:1.7">
+          If you have questions about your bill, reply to this email or contact us at support@apexcrm.com.
+        </p>
+        <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
+      </div>`,
+  };
+}
+
+function teamInviteEmail({ name, username, appUrl }) {
   return {
     subject: `You've been invited to Apex CRM`,
     html: `
-      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px;color:#1A1917">
-        <div style="font-size:20px;font-weight:700;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
-        <h1 style="font-size:24px;font-weight:700;letter-spacing:-0.5px;margin-bottom:12px">You're invited!</h1>
+      <div style="font-family:Inter,sans-serif;max-width:560px;margin:0 auto;padding:40px 24px">
+        <div style="font-size:20px;font-weight:700;color:#1A1917;margin-bottom:32px">Apex <span style="color:#185FA5;font-weight:400">CRM</span></div>
+        <h1 style="font-size:24px;font-weight:700;color:#1A1917;margin-bottom:12px">You're invited!</h1>
         <p style="font-size:15px;color:#7A7875;line-height:1.7;margin-bottom:24px">
-          Hi ${name}, you've been added as a team member on Apex CRM. Here are your login credentials:
+          Hi ${name}, you've been added as a team member on Apex CRM.
+          Click the button below to set your password and get started.
         </p>
-        <div style="background:#F5F5F4;border-radius:10px;padding:20px 24px;margin-bottom:28px">
-          <div style="margin-bottom:12px">
-            <div style="font-size:12px;color:#7A7875;margin-bottom:4px">Username</div>
-            <div style="font-size:16px;font-weight:600;color:#1A1917;font-family:monospace">${username}</div>
-          </div>
-          <div>
-            <div style="font-size:12px;color:#7A7875;margin-bottom:4px">Temporary password</div>
-            <div style="font-size:16px;font-weight:600;color:#1A1917;font-family:monospace">${tempPassword}</div>
-          </div>
+        <div style="background:#F5F5F4;border-radius:8px;padding:14px 16px;margin-bottom:24px;font-size:13px;color:#7A7875">
+          Your username: <strong style="color:#1A1917;font-family:monospace">${username}</strong>
         </div>
-        <p style="font-size:14px;color:#7A7875;line-height:1.7;margin-bottom:24px">
-          Please log in and change your password immediately from Settings → Change password.
-        </p>
         <a href="${appUrl}" style="display:inline-block;background:#185FA5;color:#fff;font-size:14px;font-weight:600;padding:12px 24px;border-radius:8px;text-decoration:none;margin-bottom:32px">
-          Sign in to Apex CRM →
+          Accept invitation →
         </a>
         <p style="font-size:12px;color:#B4B2A9;margin-top:32px">© 2026 Apex CRM</p>
-      </div>
-    `,
+      </div>`,
   };
 }
 
-// ── Handler ──────────────────────────────────────────────
+// ── Handler ───────────────────────────────────────────────────
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST")   return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
-  // Simple auth check — internal calls only
-  const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.INTERNAL_API_SECRET}`) {
+  // Internal auth check
+  const authHeader = req.headers["authorization"] || "";
+  const token = authHeader.replace("Bearer ", "");
+  if (token !== process.env.INTERNAL_API_SECRET) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
   const { type, to, data } = req.body;
-  if (!type || !to) return res.status(400).json({ error: "Missing type or to" });
+  if (!type || !to) return res.status(400).json({ error: "Missing type or recipient" });
 
   let template;
   if      (type === "welcome")         template = welcomeEmail(data);
   else if (type === "trial_warning")   template = trialWarningEmail(data);
   else if (type === "payment_confirm") template = paymentConfirmEmail(data);
-  else if (type === "team_invite")      template = teamInviteEmail(data);
-  else return res.status(400).json({ error: "Unknown email type" });
+  else if (type === "payment_failed")  template = paymentFailedEmail(data);
+  else if (type === "team_invite")     template = teamInviteEmail(data);
+  else return res.status(400).json({ error: `Unknown email type: ${type}` });
+
+  const fromAddress = process.env.EMAIL_FROM || "Apex CRM <noreply@apexcrm.com>";
 
   try {
-    const result = await resend.emails.send({
-      from:    FROM,
+    const { data: result, error } = await resend.emails.send({
+      from:    fromAddress,
       to:      [to],
       subject: template.subject,
       html:    template.html,
     });
-    res.status(200).json({ id: result.id });
+    if (error) throw error;
+    res.status(200).json({ success: true, id: result?.id });
   } catch (err) {
-    console.error("Email error:", err);
+    console.error("Email send error:", err);
     res.status(500).json({ error: err.message });
   }
 };
