@@ -1,0 +1,63 @@
+/* ─── Light mode tokens ─────────────────────────────────── */
+:root {
+  --font: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --bg: #F5F5F4;
+  --card-bg: #FFFFFF;
+  --surface: #F1F0EE;
+  --text: #1A1917;
+  --text-muted: #7A7875;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.18);
+  --accent: #185FA5;
+}
+
+/* ─── Dark mode tokens ──────────────────────────────────── */
+[data-theme="dark"] {
+  --bg: #111110;
+  --card-bg: #1C1C1A;
+  --surface: #242422;
+  --text: #EEEDE9;
+  --text-muted: #7A7875;
+  --border: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.18);
+  --accent: #378ADD;
+}
+
+/* ─── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+
+/* ─── Buttons ───────────────────────────────────────────── */
+.btn { padding: 6px 14px; font-size: 13px; font-family: inherit; border: 0.5px solid var(--border-strong); border-radius: 8px; background: var(--card-bg); color: var(--text); cursor: pointer; transition: background 0.15s; }
+.btn:hover { background: var(--surface); }
+.btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover { background: #0C447C; border-color: #0C447C; }
+[data-theme="dark"] .btn-primary:hover { background: #185FA5; }
+
+/* ─── Modal animation ───────────────────────────────────── */
+@keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 10px; }
+
+/* ─── Focus ─────────────────────────────────────────────── */
+input:focus, select:focus, textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(24,95,165,0.2); }
+
+/* ─── Mobile responsive ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar { width: 100% !important; min-width: unset !important; height: auto !important; flex-direction: row !important; padding: 0.75rem 1rem !important; overflow-x: auto; border-right: none !important; border-bottom: 0.5px solid var(--border) !important; }
+  .sidebar-logo { display: none !important; }
+  .nav-item { padding: 6px 10px !important; font-size: 12px !important; border-left: none !important; border-bottom: 2px solid transparent !important; white-space: nowrap; }
+  .nav-item.active { border-left: none !important; border-bottom: 2px solid var(--accent) !important; }
+  .nav-badge { display: none !important; }
+  .sidebar-footer { display: none !important; }
+  .app-layout { flex-direction: column !important; }
+  .pipeline-grid { grid-template-columns: 1fr !important; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .two-col { grid-template-columns: 1fr !important; }
+  .topbar-search { width: 140px !important; }
+  .hide-mobile { display: none !important; }
+}
