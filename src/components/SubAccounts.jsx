@@ -10,33 +10,64 @@ function initials(name = "") {
 export function SubAccounts({ org, currentUser, onSwitch, onUpgrade }) {
   const [subAccounts, setSubAccounts] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState("");
   const [createOpen, setCreateOpen]   = useState(false);
   const [name, setName]               = useState("");
   const [creating, setCreating]       = useState(false);
   const [error, setError]             = useState("");
 
-  const limit       = org?.sub_account_limit ?? 0;
-  const usedCount    = subAccounts.length;
-  const isUnlimited = limit === -1;
-  const atLimit      = !isUnlimited && usedCount >= limit;
-  const noAccess     = limit === 0;
+  const orgReady     = !!org?.id;
+  const limit        = org?.sub_account_limit ?? 0;
+  const usedCount     = subAccounts.length;
+  const isUnlimited  = limit === -1;
+  const atLimit       = !isUnlimited && usedCount >= limit;
+  const noAccess      = limit === 0;
 
   async function fetchSubAccounts() {
+    // Guard: never query with an undefined org id — this previously caused
+    // a silent 400 from Supabase (parent_org_id=eq.<empty>) and left the
+    // whole page stuck with no visible error.
+    if (!org?.id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const { data } = await supabase
+    setLoadError("");
+    const { data, error: fetchErr } = await supabase
       .from("organizations")
       .select("id, name, created_at, plan")
-      .eq("parent_org_id", org?.id)
+      .eq("parent_org_id", org.id)
       .order("created_at", { ascending: false });
-    setSubAccounts(data || []);
+
+    if (fetchErr) {
+      setLoadError(fetchErr.message);
+      setSubAccounts([]);
+    } else {
+      setSubAccounts(data || []);
+    }
     setLoading(false);
   }
 
-  useEffect(() => { if (org?.id) fetchSubAccounts(); }, [org?.id]);
+  useEffect(() => { fetchSubAccounts(); }, [org?.id]);
 
   async function createSubAccount() {
     setError(""); setCreating(true);
-    if (!name.trim()) { setError("Please enter a name."); setCreating(false); return; }
+
+    if (!org?.id) {
+      setError("Your organization hasn't finished loading yet. Please wait a moment and try again.");
+      setCreating(false);
+      return;
+    }
+    if (!currentUser?.id) {
+      setError("Could not verify your account. Please refresh the page and try again.");
+      setCreating(false);
+      return;
+    }
+    if (!name.trim()) {
+      setError("Please enter a name.");
+      setCreating(false);
+      return;
+    }
 
     const { data, error: rpcError } = await supabase.rpc("create_sub_account", {
       p_parent_org_id: org.id,
@@ -45,7 +76,7 @@ export function SubAccounts({ org, currentUser, onSwitch, onUpgrade }) {
     });
 
     if (rpcError) {
-      setError(rpcError.message.replace(/^.*:\s*/, "")); // strip Postgres prefix
+      setError(rpcError.message.replace(/^.*:\s*/, ""));
       setCreating(false);
       return;
     }
@@ -56,6 +87,18 @@ export function SubAccounts({ org, currentUser, onSwitch, onUpgrade }) {
     await fetchSubAccounts();
   }
 
+  // Org still loading — show a clear, visible state instead of doing nothing
+  if (!orgReady) {
+    return (
+      <div>
+        <SectionTitle>Sub-accounts</SectionTitle>
+        <Card>
+          <EmptyState message="Loading your organization... if this doesn't load within a few seconds, try refreshing the page." />
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -64,7 +107,7 @@ export function SubAccounts({ org, currentUser, onSwitch, onUpgrade }) {
         </SectionTitle>
         <button
           className="btn btn-primary"
-          onClick={() => setCreateOpen(true)}
+          onClick={() => { setError(""); setCreateOpen(true); }}
           disabled={atLimit || noAccess}
           title={noAccess ? "Upgrade to Starter or Pro to use sub-accounts" : atLimit ? "Sub-account limit reached" : ""}
           style={{ opacity: (atLimit || noAccess) ? 0.5 : 1, cursor: (atLimit || noAccess) ? "not-allowed" : "pointer" }}
@@ -72,6 +115,15 @@ export function SubAccounts({ org, currentUser, onSwitch, onUpgrade }) {
           + New sub-account
         </button>
       </div>
+
+      {loadError && (
+        <div style={{ background: "#FCEBEB", border: "0.5px solid #F09595", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#A32D2D" }}>
+          Couldn't load sub-accounts: {loadError}
+          <button onClick={fetchSubAccounts} style={{ marginLeft: 10, fontSize: 12, fontWeight: 600, color: "#A32D2D", background: "transparent", border: "0.5px solid #F09595", borderRadius: 6, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+            Retry
+          </button>
+        </div>
+      )}
 
       {noAccess && (
         <div style={{ background: "#E6F1FB", border: "0.5px solid #B5D4F4", borderRadius: 10, padding: "12px 16px", marginBottom: 14, fontSize: 13, color: "#185FA5", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
