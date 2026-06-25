@@ -1,141 +1,150 @@
-import React, { useState, useRef } from "react";
-import { SectionTitle, IconBtn } from "./UI";
+import React, { useState } from "react";
+import { Card, EmptyState, IconBtn } from "./UI";
 import { Modal, FormGroup, Input, Select } from "./Modal";
 
-const STAGES = ["Lead", "Qualified", "Proposal", "Won"];
-const STAGE_COLORS = {
-  Lead:      { bg: "#FAEEDA", text: "#854F0B", dot: "#EF9F27" },
-  Qualified: { bg: "#E6F1FB", text: "#185FA5", dot: "#378ADD" },
-  Proposal:  { bg: "#EEEDFE", text: "#534AB7", dot: "#7F77DD" },
-  Won:       { bg: "#EAF3DE", text: "#3B6D11", dot: "#639922" },
-};
-function blank() { return { name: "", company: "", value: "", stage: "Lead", contact_name: "", close_date: "" }; }
+function blank() { return { name: "", company: "", value: "", contact_name: "", close_date: "", stage: "" }; }
 
-function DealCard({ deal, onDelete, onEdit, onMoveStage, onDragStart }) {
-  const currentIdx = STAGES.indexOf(deal.stage);
-  const canAdvance = currentIdx < STAGES.length - 1;
-  const canGoBack  = currentIdx > 0;
-  return (
-    <div draggable onDragStart={e => onDragStart(e, deal.id)}
-      style={{ background: "var(--card-bg)", border: "0.5px solid var(--border)", borderRadius: 9, padding: "10px 12px", marginBottom: 8, cursor: "grab", transition: "border-color 0.15s", userSelect: "none" }}
-      onMouseEnter={e => e.currentTarget.style.borderColor = "var(--border-strong)"}
-      onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}
-      onDragEnd={e => e.currentTarget.style.opacity = "1"}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", flex: 1, paddingRight: 4 }}>{deal.name}</div>
-        <div style={{ display: "flex", gap: 2 }}>
-          <IconBtn onClick={() => onEdit(deal)} title="Edit deal">
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9.5 2.5l2 2L4 12H2v-2L9.5 2.5z"/></svg>
-          </IconBtn>
-          <IconBtn onClick={() => onDelete(deal.id)} title="Delete deal">
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M2 4h10M5 4V2.5a.5.5 0 01.5-.5h3a.5.5 0 01.5.5V4M11 4l-.8 7.5a.5.5 0 01-.5-.5H4.3a.5.5 0 01-.5-.5L3 4"/></svg>
-          </IconBtn>
-        </div>
-      </div>
-      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", margin: "4px 0 1px" }}>${Number(deal.value).toLocaleString()}</div>
-      <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: deal.contact_name || deal.close_date ? 4 : 8 }}>{deal.company}</div>
-      {deal.contact_name && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Contact: {deal.contact_name}</div>}
-      {deal.close_date && <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 4 }}>Close: {deal.close_date}</div>}
-      <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-        {canGoBack && (
-          <button onClick={() => onMoveStage(deal.id, STAGES[currentIdx - 1])}
-            style={{ flex: 1, fontSize: 11, padding: "3px 0", border: "0.5px solid var(--border-strong)", borderRadius: 6, background: "transparent", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
-            onMouseEnter={e => { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--text-muted)"; }}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M6 2L3 5l3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            {STAGES[currentIdx - 1]}
-          </button>
-        )}
-        {canAdvance && (
-          <button onClick={() => onMoveStage(deal.id, STAGES[currentIdx + 1])}
-            style={{ flex: 1, fontSize: 11, padding: "3px 0", border: "0.5px solid #185FA5", borderRadius: 6, background: "#185FA5", color: "#fff", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}
-            onMouseEnter={e => e.currentTarget.style.background = "#0C447C"}
-            onMouseLeave={e => e.currentTarget.style.background = "#185FA5"}
-          >
-            {STAGES[currentIdx + 1]}
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 2l3 3-3 3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-export function Pipeline({ deals, addDeal, updateDeal, deleteDeal, updateDealStage }) {
-  const [open, setOpen] = useState(false);
+export function Pipeline({ deals, contacts = [], stages = [], stagesLoading, addDeal, updateDeal, deleteDeal, updateDealStage, onManageStages, isAdmin }) {
+  const [addOpen, setAddOpen]       = useState(false);
   const [editTarget, setEditTarget] = useState(null);
-  const [form, setForm] = useState(blank());
-  const [dragOverStage, setDragOverStage] = useState(null);
-  const dragId = useRef(null);
+  const [form, setForm]             = useState(blank());
+  const [dragDealId, setDragDealId] = useState(null);
 
   function set(k) { return v => setForm(f => ({ ...f, [k]: v })); }
 
-  function openAdd() { setForm(blank()); setOpen(true); }
-  function openEdit(deal) { setForm({ name: deal.name, company: deal.company||"", value: deal.value||"", stage: deal.stage, contact_name: deal.contact_name||"", close_date: deal.close_date||"" }); setEditTarget(deal); }
-  function saveAdd() { if (!form.name.trim()) return; addDeal({ ...form, value: Number(form.value)||0 }); setForm(blank()); setOpen(false); }
-  function saveEdit() { if (!form.name.trim()) return; updateDeal(editTarget.id, { ...form, value: Number(form.value)||0 }); setEditTarget(null); }
+  const stageNames = stages.map(s => s.name);
+  const defaultStage = stageNames[0] || "";
 
-  function handleDragStart(e, id) { dragId.current = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.style.opacity = "0.45"; }
-  function handleDragOver(e, stage) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOverStage(stage); }
-  function handleDrop(e, stage) { e.preventDefault(); setDragOverStage(null); if (dragId.current) { updateDealStage(dragId.current, stage); dragId.current = null; } }
+  function openAdd()  { setForm({ ...blank(), stage: defaultStage }); setAddOpen(true); }
+  function openEdit(d){ setForm({ name: d.name, company: d.company || "", value: d.value, contact_name: d.contact_name || "", close_date: d.close_date || "", stage: d.stage }); setEditTarget(d); }
+  function saveAdd()  { if (!form.name.trim()) return; addDeal({ ...form, value: Number(form.value) || 0 }); setAddOpen(false); }
+  function saveEdit() { if (!form.name.trim()) return; updateDeal(editTarget.id, { ...form, value: Number(form.value) || 0 }); setEditTarget(null); }
 
-  const stageTotal = s => deals.filter(d => d.stage === s).reduce((a, d) => a + (Number(d.value)||0), 0);
-  const winRate = deals.length > 0 ? Math.round((deals.filter(d => d.stage === "Won").length / deals.length) * 100) : 0;
+  const wonStage  = stages.find(s => s.is_won);
+  const lostStage = stages.find(s => s.is_lost);
+  const openDeals = deals.filter(d => d.stage !== wonStage?.name && d.stage !== lostStage?.name);
+  const wonDeals  = deals.filter(d => d.stage === wonStage?.name);
+  const winRate   = deals.length > 0 ? Math.round((wonDeals.length / deals.length) * 100) : 0;
+
+  function handleDrop(stageName) {
+    if (dragDealId) { updateDealStage(dragDealId, stageName); setDragDealId(null); }
+  }
+
+  if (stagesLoading) {
+    return <EmptyState message="Loading pipeline stages..." />;
+  }
+
+  if (stages.length === 0) {
+    return (
+      <div>
+        <EmptyState message="No pipeline stages configured yet." />
+        {isAdmin && (
+          <button onClick={onManageStages} style={{ marginTop: 10, fontSize: 13, color: "var(--accent)", background: "var(--surface)", border: "0.5px solid var(--border-strong)", borderRadius: 8, padding: "7px 16px", cursor: "pointer", fontFamily: "inherit" }}>
+            Set up pipeline stages →
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <SectionTitle>Deal pipeline</SectionTitle>
-          <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Win rate: <strong style={{ color: "var(--text)" }}>{winRate}%</strong></span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Win rate: <strong style={{ color: "var(--text)" }}>{winRate}%</strong></div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {isAdmin && (
+            <button onClick={onManageStages} style={{ fontSize: 13, color: "var(--text-muted)", background: "transparent", border: "0.5px solid var(--border-strong)", borderRadius: 8, padding: "7px 14px", cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="2.5"/><path d="M7 1.5v1M7 11.5v1M1.5 7h1M11.5 7h1M3.3 3.3l.7.7M10 10l.7.7M10 3.3l-.7.7M3.3 10l.7.7"/></svg>
+              Manage stages
+            </button>
+          )}
+          <button className="btn btn-primary" onClick={openAdd}>+ Add deal</button>
         </div>
-        <button className="btn btn-primary" onClick={openAdd}>+ Add deal</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 12 }}>
-        {STAGES.map(stage => {
-          const sc = STAGE_COLORS[stage];
-          const stageDeals = deals.filter(d => d.stage === stage);
-          const isOver = dragOverStage === stage;
+      <div style={{ display: "grid", gridTemplateColumns: `repeat(${stages.length}, minmax(220px, 1fr))`, gap: 12, overflowX: "auto" }}>
+        {stages.map(stage => {
+          const stageDeals = deals.filter(d => d.stage === stage.name);
           return (
-            <div key={stage} onDragOver={e => handleDragOver(e, stage)} onDrop={e => handleDrop(e, stage)} onDragLeave={() => setDragOverStage(null)}
-              style={{ background: "var(--surface)", borderRadius: 12, padding: 12, border: isOver ? "1.5px dashed #185FA5" : "0.5px solid var(--border)", transition: "border 0.15s", minHeight: 120 }}
+            <div
+              key={stage.id}
+              onDragOver={e => e.preventDefault()}
+              onDrop={() => handleDrop(stage.name)}
+              style={{ background: "var(--surface)", borderRadius: 12, padding: 10, border: "0.5px solid var(--border)", minHeight: 120 }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, padding: "2px 4px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 7, height: 7, borderRadius: "50%", background: sc.dot }} />
-                  <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--text-muted)" }}>{stage}</div>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: stage.color }} />
+                  <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--text-muted)" }}>{stage.name}</span>
                 </div>
-                <span style={{ fontSize: 11, color: sc.text, background: sc.bg, padding: "1px 7px", borderRadius: 20 }}>{stageDeals.length}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, background: "var(--card-bg)", color: "var(--text-muted)", padding: "1px 7px", borderRadius: 20 }}>{stageDeals.length}</span>
               </div>
-              {stageDeals.length > 0 && <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>${stageTotal(stage).toLocaleString()} total</div>}
-              {stageDeals.map(d => (
-                <DealCard key={d.id} deal={d} onDelete={deleteDeal} onEdit={openEdit} onMoveStage={updateDealStage} onDragStart={handleDragStart} />
-              ))}
-              {stageDeals.length === 0 && <div style={{ fontSize: 12, color: "var(--text-muted)", padding: "16px 0", textAlign: "center" }}>{isOver ? "Drop here" : "No deals"}</div>}
+
+              {stageDeals.length === 0
+                ? <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center", padding: "1rem 0" }}>No deals</div>
+                : stageDeals.map(d => (
+                  <div
+                    key={d.id}
+                    draggable
+                    onDragStart={() => setDragDealId(d.id)}
+                    onClick={() => openEdit(d)}
+                    style={{ background: "var(--card-bg)", border: "0.5px solid var(--border)", borderRadius: 9, padding: "10px 12px", marginBottom: 8, cursor: "grab" }}
+                  >
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", marginBottom: 4 }}>{d.name}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>${Number(d.value || 0).toLocaleString()}</div>
+                    {d.contact_name && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.contact_name}</div>}
+                    {d.close_date && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Closes {d.close_date}</div>}
+
+                    {/* Quick stage-advance buttons */}
+                    <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+                      {stages.filter(s => s.id !== stage.id).slice(0, 3).map(s => (
+                        <button
+                          key={s.id}
+                          onClick={e => { e.stopPropagation(); updateDealStage(d.id, s.name); }}
+                          style={{ fontSize: 10, padding: "2px 7px", borderRadius: 5, background: "var(--surface)", border: "0.5px solid var(--border)", color: "var(--text-muted)", cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          → {s.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              }
             </div>
           );
         })}
       </div>
 
-      <Modal isOpen={open} title="Add deal" onClose={() => setOpen(false)} onSave={saveAdd}>
+      <Modal isOpen={addOpen} title="Add deal" onClose={() => setAddOpen(false)} onSave={saveAdd}>
         <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
         <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
-        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
+        <FormGroup label="Contact">
+          <select value={form.contact_name} onChange={e => set("contact_name")(e.target.value)}
+            style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none" }}>
+            <option value="">— Select a contact —</option>
+            {contacts.map(c => <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ""}</option>)}
+          </select>
+        </FormGroup>
         <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
         <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
-        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={stageNames} /></FormGroup>
       </Modal>
 
-      <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}>
+      <Modal isOpen={!!editTarget} title="Edit deal" onClose={() => setEditTarget(null)} onSave={saveEdit}
+        extraAction={{ label: "Delete", onClick: () => { deleteDeal(editTarget.id); setEditTarget(null); } }}
+      >
         <FormGroup label="Deal name *"><Input value={form.name} onChange={set("name")} placeholder="e.g. Q3 Renewal" /></FormGroup>
         <FormGroup label="Company"><Input value={form.company} onChange={set("company")} placeholder="Company name" /></FormGroup>
-        <FormGroup label="Contact name"><Input value={form.contact_name} onChange={set("contact_name")} placeholder="e.g. Sarah Mitchell" /></FormGroup>
+        <FormGroup label="Contact">
+          <select value={form.contact_name} onChange={e => set("contact_name")(e.target.value)}
+            style={{ width: "100%", padding: "7px 10px", fontSize: 13, border: "0.5px solid var(--border-strong)", borderRadius: 8, background: "var(--bg)", color: "var(--text)", fontFamily: "inherit", outline: "none" }}>
+            <option value="">— Select a contact —</option>
+            {contacts.map(c => <option key={c.id} value={c.name}>{c.name} {c.company ? `(${c.company})` : ""}</option>)}
+          </select>
+        </FormGroup>
         <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
         <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
-        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={STAGES} /></FormGroup>
+        <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={stageNames} /></FormGroup>
       </Modal>
     </div>
   );

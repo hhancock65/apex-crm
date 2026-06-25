@@ -15,6 +15,8 @@ import { UpgradeModal } from "./components/UpgradeModal";
 import { AdminDashboard } from "./components/AdminDashboard";
 import { WorkspaceSwitcher } from "./components/WorkspaceSwitcher";
 import { SubAccounts } from "./components/SubAccounts";
+import { usePipelineStages } from "./hooks/usePipelineStages";
+import { StageManager } from "./components/StageManager";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
@@ -50,6 +52,19 @@ export default function App() {
   const auth        = useAuth();
   const orgSwitcher  = useOrgSwitcher(auth.user, auth.org);
   const store        = useStore(auth.user?.id, orgSwitcher.activeOrgId || auth.user?.org_id);
+
+  // Pipeline stages always live on the top-level org. If the active org is a
+  // sub-account, resolve up to auth.org (the home org) to fetch its stages.
+  const activeOrgIsSub       = orgSwitcher.activeOrgMeta?.is_sub_account || false;
+  const parentOrgIdForStages = activeOrgIsSub ? auth.org?.id : null;
+  const {
+    stages,
+    loading: stagesLoading,
+    ownerOrgId: stagesOwnerOrgId,
+    refreshStages,
+  } = usePipelineStages(orgSwitcher.activeOrgId, activeOrgIsSub, parentOrgIdForStages);
+
+  const [showStageManager, setShowStageManager] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light");
@@ -219,7 +234,20 @@ export default function App() {
           <div style={{ flex: 1, overflowY: "auto", padding: "1.5rem" }}>
             {view === "dashboard" && <Dashboard contacts={store.contacts} deals={store.deals} tasks={store.tasks} stats={store.stats} />}
             {view === "contacts"  && <Contacts contacts={store.contacts} addContact={store.addContact} updateContact={store.updateContact} deleteContact={store.deleteContact} search={search} />}
-            {view === "pipeline"  && <Pipeline deals={store.deals} addDeal={store.addDeal} updateDeal={store.updateDeal} deleteDeal={store.deleteDeal} updateDealStage={store.updateDealStage} />}
+            {view === "pipeline"  && (
+              <Pipeline
+                deals={store.deals}
+                contacts={store.contacts}
+                stages={stages}
+                stagesLoading={stagesLoading}
+                addDeal={store.addDeal}
+                updateDeal={store.updateDeal}
+                deleteDeal={store.deleteDeal}
+                updateDealStage={store.updateDealStage}
+                onManageStages={() => setShowStageManager(true)}
+                isAdmin={auth.user?.role === "Admin"}
+              />
+            )}
             {view === "tasks"     && <Tasks tasks={store.tasks} addTask={store.addTask} updateTask={store.updateTask} toggleTask={store.toggleTask} deleteTask={store.deleteTask} />}
             {view === "notes"     && <Notes notes={store.notes} addNote={store.addNote} updateNote={store.updateNote} deleteNote={store.deleteNote} />}
             {view === "users"     && <Users users={store.users} currentUser={auth.user} updateUserProfile={store.updateUserProfile} />}
@@ -234,6 +262,27 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {showStageManager && (
+        <div onClick={e => { if (e.target === e.currentTarget) setShowStageManager(false); }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem" }}
+        >
+          <div style={{ background: "var(--card-bg)", borderRadius: 14, padding: "1.5rem", width: 560, maxHeight: "80vh", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>Manage pipeline stages</div>
+              <button onClick={() => setShowStageManager(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-muted)" }}>
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M4 4l10 10M14 4L4 14"/></svg>
+              </button>
+            </div>
+            <StageManager
+              stages={stages}
+              ownerOrgId={stagesOwnerOrgId}
+              isAdmin={auth.user?.role === "Admin"}
+              onStagesChanged={refreshStages}
+            />
+          </div>
+        </div>
+      )}
 
       <UpgradeModal isOpen={showUpgrade} onClose={() => setShowUpgrade(false)} org={auth.org} user={auth.user} />
     </div>
