@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card, EmptyState, IconBtn } from "./UI";
 import { Modal, FormGroup, Input, Select } from "./Modal";
+import { DateInput } from "./DatePicker";
 
 function blank() { return { name: "", company: "", value: "", contact_name: "", close_date: "", stage: "" }; }
 
@@ -22,7 +23,6 @@ export function Pipeline({ deals, contacts = [], stages = [], stagesLoading, add
 
   const wonStage  = stages.find(s => s.is_won);
   const lostStage = stages.find(s => s.is_lost);
-  const openDeals = deals.filter(d => d.stage !== wonStage?.name && d.stage !== lostStage?.name);
   const wonDeals  = deals.filter(d => d.stage === wonStage?.name);
   const winRate   = deals.length > 0 ? Math.round((wonDeals.length / deals.length) * 100) : 0;
 
@@ -93,9 +93,13 @@ export function Pipeline({ deals, contacts = [], stages = [], stagesLoading, add
                     <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text)", marginBottom: 4 }}>{d.name}</div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>${Number(d.value || 0).toLocaleString()}</div>
                     {d.contact_name && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{d.contact_name}</div>}
-                    {d.close_date && <div style={{ fontSize: 11, color: "var(--text-muted)" }}>Closes {d.close_date}</div>}
+                    {d.close_date && (
+                      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--text-muted)" }}>
+                        <svg width="10" height="10" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="2" width="12" height="11" rx="1.5"/><path d="M1 6h12M4 1v2M10 1v2"/></svg>
+                        Closes {d.close_date}
+                      </div>
+                    )}
 
-                    {/* Quick stage-advance buttons */}
                     <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
                       {stages.filter(s => s.id !== stage.id).slice(0, 3).map(s => (
                         <button
@@ -126,7 +130,9 @@ export function Pipeline({ deals, contacts = [], stages = [], stagesLoading, add
           </select>
         </FormGroup>
         <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
-        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+        <FormGroup label="Expected close date">
+          <DateInput value={form.close_date} onChange={set("close_date")} placeholder="Pick expected close date" />
+        </FormGroup>
         <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={stageNames} /></FormGroup>
       </Modal>
 
@@ -143,7 +149,9 @@ export function Pipeline({ deals, contacts = [], stages = [], stagesLoading, add
           </select>
         </FormGroup>
         <FormGroup label="Value ($)"><Input value={form.value} onChange={set("value")} placeholder="e.g. 15000" type="number" /></FormGroup>
-        <FormGroup label="Expected close date"><Input value={form.close_date} onChange={set("close_date")} placeholder="e.g. Apr 30" /></FormGroup>
+        <FormGroup label="Expected close date">
+          <DateInput value={form.close_date} onChange={set("close_date")} placeholder="Pick expected close date" />
+        </FormGroup>
         <FormGroup label="Stage"><Select value={form.stage} onChange={set("stage")} options={stageNames} /></FormGroup>
       </Modal>
     </div>
