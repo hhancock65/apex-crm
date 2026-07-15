@@ -1,17 +1,30 @@
 # dependencies
-node_modules/
+node_modules
 
-# production build
-build/
+# build output
+dist
+dist-ssr
 
-# environment variables — NEVER commit these
+# env
 .env
 .env.local
-.env.production
+.env.*.local
 
-# misc
-.DS_Store
+# editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+
+# local Claude Code tooling state (not project source)
+.claude/
+
+# logs
 *.log
+npm-debug.log*
 
-.vercel
-.env*.local
+# os
+.DS_Store
+Thumbs.db
+
+*.local
+*.tsbuildinfo

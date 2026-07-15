@@ -1,0 +1,111 @@
+# Supabase CLI project config. Replace project_id with your project's ref
+# (Project Settings > General > Reference ID) before running `supabase link`.
+project_id = "your-project-ref"
+
+# create-retell-agent / update-retell-agent are called from the signed-in app
+# with a Clerk-issued (third-party auth) token, not a Supabase-native one —
+# the platform's built-in verify_jwt gate is bypassed and each function does
+# its own auth by using that forwarded token to run an RLS-scoped Supabase
+# query. If the token is invalid/expired, the query itself fails or returns
+# nothing, which the function already treats as "not found or not accessible".
+[functions.create-retell-agent]
+verify_jwt = false
+
+[functions.update-retell-agent]
+verify_jwt = false
+
+# Retell calls this directly — there is no Supabase session at all. Authorized
+# instead via a shared secret query param (see RETELL_WEBHOOK_SECRET).
+[functions.retell-inbound-webhook]
+verify_jwt = false
+
+# Also called directly by Retell with no Supabase session. Authorized instead
+# via the HMAC X-Retell-Signature header, keyed with RETELL_API_KEY (see
+# _shared/retell-webhook-verify.ts) — Retell's real signing mechanism, not a
+# shared secret.
+[functions.retell-call-webhook]
+verify_jwt = false
+
+# Retell calls this synchronously mid-call as the target `url` of every
+# custom-function tool (create_or_update_contact, check_existing_customer —
+# see _shared/retell-tools.ts). Same auth as retell-call-webhook: the HMAC
+# X-Retell-Signature header, keyed with RETELL_API_KEY.
+[functions.retell-function-handler]
+verify_jwt = false
+
+# Invoked by our own Postgres trigger function (handle_workflow_trigger_event,
+# migration 0011/0017) via pg_net, and by resume-scheduled-workflows when a
+# paused run's wait elapses — no Supabase session, no Retell involved at all.
+# Authorized via a shared secret header, X-Workflow-Trigger-Secret, keyed with
+# WORKFLOW_TRIGGER_SECRET (same pattern as retell-inbound-webhook's query-param
+# secret, just as a header since pg_net sets headers, not query params, most
+# naturally). Named execute-workflow-run in the 0011 foundation pass; renamed
+# workflow-executor once it became a real step-by-step runner (0017).
+[functions.workflow-executor]
+verify_jwt = false
+
+# Invoked every minute by pg_cron (trigger_workflow_resume_scan(), migration
+# 0017) via pg_net — same shared-secret pattern and secret as
+# workflow-executor (this is the same trust boundary as every other
+# "Postgres calling our own Edge Functions" hop, not a new one).
+[functions.resume-scheduled-workflows]
+verify_jwt = false
+
+# Called from the signed-in app (Clerk-issued token) — same auth pattern as
+# create-retell-agent/launch-campaign.
+[functions.stripe-checkout]
+verify_jwt = false
+
+[functions.stripe-portal]
+verify_jwt = false
+
+# Called from the signed-in app (Clerk-issued token) — same auth pattern as
+# stripe-checkout/stripe-portal.
+[functions.stripe-billing-details]
+verify_jwt = false
+
+# Called from the signed-in app (Clerk-issued token) — same auth pattern as
+# create-retell-agent/stripe-checkout. Calls Clerk's own Backend API using
+# CLERK_SECRET_KEY (a separate, server-side secret from the frontend's
+# VITE_CLERK_PUBLISHABLE_KEY).
+[functions.partner-register]
+verify_jwt = false
+
+[functions.create-client-organization]
+verify_jwt = false
+
+# Stripe calls this directly — there is no Supabase session at all.
+# Authorized instead via the `Stripe-Signature` header, keyed with
+# STRIPE_WEBHOOK_SECRET (see scripts/setup-stripe.mjs for how the webhook
+# endpoint itself gets created).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# A SEPARATE Stripe webhook endpoint from stripe-webhook, subscribed to
+# just invoice.upcoming, with its own signing secret
+# (STRIPE_OVERAGE_WEBHOOK_SECRET) — see calculate-overage/index.ts for why
+# usage-based overage billing is split out from subscription lifecycle.
+[functions.calculate-overage]
+verify_jwt = false
+
+# Called from the signed-in app (Clerk-issued token) when a campaign's wizard
+# "Launch Campaign" button is clicked — same auth pattern as
+# create-retell-agent/update-retell-agent.
+[functions.launch-campaign]
+verify_jwt = false
+
+# Invoked on a schedule by pg_cron (trigger_campaign_batch_processing(),
+# migration 0014) via pg_net — same shared-secret pattern and same secret as
+# execute-workflow-run (both are "Postgres calling our own Edge Functions",
+# the same trust boundary, not two different ones).
+[functions.process-campaign-batch]
+verify_jwt = false
+
+# Called from the signed-in app (Clerk-issued token) — same auth pattern as
+# create-retell-agent/partner-register. Calls Clerk's Backend API using
+# CLERK_SECRET_KEY (org membership/invitation management).
+[functions.team-management]
+verify_jwt = false
+
+[functions.delete-organization]
+verify_jwt = false
