@@ -1,6 +1,6 @@
 # Supabase CLI project config. Replace project_id with your project's ref
 # (Project Settings > General > Reference ID) before running `supabase link`.
-project_id = "your-project-ref"
+project_id = "xshuoyxmuntkwzahknqv"
 
 # create-retell-agent / update-retell-agent are called from the signed-in app
 # with a Clerk-issued (third-party auth) token, not a Supabase-native one —
